@@ -1,0 +1,25 @@
+# Binaries for programs and plugins
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.mod
+
+# Output files
+*.out
+
+# Go specific
+/bin/
+/pkg/
+/vendor/
+
+# Testing
+/report/
+
+# IDE
+.idea/
+.vscode/
+
+# Dependency directories
+/go.sum
