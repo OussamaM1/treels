@@ -1,8 +1,10 @@
-// Package cmd provides functionality related to the command line.
+// Package cmd - cmd/root.go
 package cmd
 
 import (
 	"fmt"
+	"github.com/oussamaM1/treels/service"
+	"github.com/oussamaM1/treels/utils"
 	"github.com/spf13/cobra"
 	"log"
 )
@@ -21,6 +23,12 @@ func Execute() {
 	}
 }
 
-func run(_ *cobra.Command, _ []string) {
-	fmt.Println("run function")
+func run(_ *cobra.Command, args []string) {
+	if utils.ValidateDirectoryArgs(args) {
+		service.ListDirectory(service.Options{Directory: args[0]})
+	} else if len(args) == 0 {
+		service.ListDirectory(service.Options{})
+	} else {
+		fmt.Println("❌ Usage: treels <directory_path>")
+	}
 }
