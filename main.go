@@ -1,4 +1,4 @@
-// Package main - the entry point for the application.
+// Package main - main.go entry point for the application.
 package main
 
 import (
