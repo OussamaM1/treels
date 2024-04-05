@@ -29,9 +29,9 @@ func Execute() {
 
 func run(_ *cobra.Command, args []string) {
 	if utils.ValidateDirectoryArgs(args) {
-		service.ListDirectory(service.Options{Directory: args[len(args)-1], Flags: flag})
+		service.Dispatcher(module.Options{Directory: args[len(args)-1], Flags: flag})
 	} else if len(args) == 0 {
-		service.ListDirectory(service.Options{Flags: flag})
+		service.Dispatcher(module.Options{Flags: flag})
 	} else {
 		fmt.Println("❌ Usage: treels [options] <directory_path>")
 	}
