@@ -12,7 +12,6 @@ func CheckDefaultDirectory(directory *string) {
 		// Get the current working directory - default value
 		var err error
 		*directory, err = os.Getwd()
-		log.Println(*directory)
 		if err != nil {
 			log.Fatalf("Error getting current working directory: %s\n", err)
 		}

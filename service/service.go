@@ -21,14 +21,14 @@ const (
 // Dispatcher func - executes function based on flags
 func Dispatcher(options module.Options) {
 	if options.Flags.ShowTreeView {
-		TreeDirectory(options, "", true)
+		treeDirectory(options, "", true)
 	} else {
-		ListDirectory(options)
+		listDirectory(options)
 	}
 }
 
-// ListDirectory func - lists the content of the directory.
-func ListDirectory(options module.Options) {
+// listDirectory func - lists the content of the directory.
+func listDirectory(options module.Options) {
 	CheckDefaultDirectory(&options.Directory)
 
 	// Open and read the directory
@@ -38,8 +38,12 @@ func ListDirectory(options module.Options) {
 		log.Fatalf("Error reading directory: %s\n", err)
 	}
 
+	// Sort files by name
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name() < files[j].Name()
+	})
+
 	// Print files and directories
-	fmt.Printf("Files and directories in %s:\n", options.Directory)
 	for _, file := range files {
 		if !isHidden(file.Name()) || options.Flags.ShowHidden {
 			fmt.Println(file.Name())
@@ -47,8 +51,8 @@ func ListDirectory(options module.Options) {
 	}
 }
 
-// TreeDirectory func - displays a tree view of the directory.
-func TreeDirectory(options module.Options, indent string, isLastFolder bool) {
+// treeDirectory func - displays a tree view of the directory.
+func treeDirectory(options module.Options, indent string, isLastFolder bool) {
 	CheckDefaultDirectory(&options.Directory)
 
 	// Open and read the directory
@@ -84,7 +88,7 @@ func TreeDirectory(options module.Options, indent string, isLastFolder bool) {
 			if file.IsDir() {
 				newDirectory := filepath.Join(options.Directory, file.Name())
 				newIsLastFolder := i == lastVisibleIndex && isLastFolder
-				TreeDirectory(module.Options{Directory: newDirectory, Flags: module.Flags{ShowHidden: options.Flags.ShowHidden}}, childIndentNext, newIsLastFolder)
+				treeDirectory(module.Options{Directory: newDirectory, Flags: module.Flags{ShowHidden: options.Flags.ShowHidden}}, childIndentNext, newIsLastFolder)
 			}
 		}
 	}
