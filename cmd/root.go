@@ -15,7 +15,7 @@ var flag module.Flags
 // RootCommand Command - is the root command for the application.
 var RootCommand = &cobra.Command{
 	Use:   "treels",
-	Short: "🌳 Treels is a CLI tool crafted in Go, merging tree and ls commands with intuitive merging and beautification features.",
+	Short: "⚡ Treels is a CLI tool crafted in Go, merging tree and ls commands with intuitive merging and beautification features.",
 	Run:   run,
 }
 
