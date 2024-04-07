@@ -97,7 +97,7 @@ func treeDirectory(options module.Options, indent string, isLastFolder bool) {
 			if file.IsDir() {
 				newDirectory := filepath.Join(options.Directory, file.Name())
 				newIsLastFolder := i == lastVisibleIndex && isLastFolder
-				treeDirectory(module.Options{Directory: newDirectory, Flags: module.Flags{ShowHidden: options.Flags.ShowHidden}}, childIndentNext, newIsLastFolder)
+				treeDirectory(module.Options{Directory: newDirectory, Flags: module.Flags{ShowHidden: options.Flags.ShowHidden, HideIcon: options.Flags.HideIcon}}, childIndentNext, newIsLastFolder)
 			}
 		}
 	}
