@@ -47,7 +47,11 @@ func listDirectory(options module.Options) {
 	// Print files and directories
 	for _, file := range files {
 		if !isHidden(file.Name()) || options.Flags.ShowHidden {
-			fmt.Println(printWithIconAndPrefix("", file))
+			if !options.Flags.HideIcon {
+				fmt.Println(printWithIconAndPrefix("", file))
+			} else {
+				fmt.Println(printFilesAndFolderWithoutIcons("", file))
+			}
 		}
 	}
 }
@@ -84,7 +88,11 @@ func treeDirectory(options module.Options, indent string, isLastFolder bool) {
 				childIndentNext = indent + boxLightVertical
 			}
 
-			fmt.Println(printWithIconAndPrefix(prefix, file))
+			if !options.Flags.HideIcon {
+				fmt.Println(printWithIconAndPrefix(prefix, file))
+			} else {
+				fmt.Println(printFilesAndFolderWithoutIcons(prefix, file))
+			}
 
 			if file.IsDir() {
 				newDirectory := filepath.Join(options.Directory, file.Name())

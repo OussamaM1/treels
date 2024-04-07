@@ -5,6 +5,7 @@ package module
 type Flags struct {
 	ShowHidden   bool
 	ShowTreeView bool
+	HideIcon     bool
 }
 
 // Options struct - Contains configuration options for directory listing.
