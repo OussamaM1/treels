@@ -20,6 +20,7 @@ const (
 
 // Dispatcher func - executes function based on flags
 func Dispatcher(options module.Options) {
+	fmt.Println(".")
 	if options.Flags.ShowTreeView {
 		treeDirectory(options, "", true)
 	} else {
