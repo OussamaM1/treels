@@ -2,6 +2,8 @@
 package service
 
 import (
+	"fmt"
+	"github.com/oussamaM1/treels/module"
 	"log"
 	"os"
 )
@@ -44,4 +46,15 @@ func closeDirectory(directory *os.File) {
 // isHidden func - checks if the file name starts with a dot (hidden file).
 func isHidden(name string) bool {
 	return len(name) > 0 && name[0] == '.'
+}
+
+// printWithIconAndPrefix func - prints files and folder with icons and prefix
+func printWithIconAndPrefix(prefix string, file os.FileInfo) string {
+	var format string
+	if file.IsDir() {
+		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.LightPurple, module.Bold, module.Folder, file.Name(), module.Reset)
+	} else {
+		format = fmt.Sprintf("%s%s %s", prefix, module.File, file.Name())
+	}
+	return format
 }
