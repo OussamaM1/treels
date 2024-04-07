@@ -78,6 +78,7 @@ func printWithIconAndPrefix(prefix string, file os.FileInfo) string {
 	return format
 }
 
+// printIconFiles func - prints files with icons
 func printIconFiles(prefix string, file os.FileInfo, extension string) string {
 	var format string
 	switch extension {
@@ -93,6 +94,7 @@ func printIconFiles(prefix string, file os.FileInfo, extension string) string {
 	return format
 }
 
+// printIconFolders func - prints folders with icons
 func printIconFolders(prefix string, file os.FileInfo, extension string) string {
 	var format string
 	switch extension {
@@ -100,6 +102,17 @@ func printIconFolders(prefix string, file os.FileInfo, extension string) string 
 		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.Orange, module.Git, file.Name(), module.Reset)
 	default:
 		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.Pink, module.Folder, file.Name(), module.Reset)
+	}
+	return format
+}
+
+// printFilesAndFolderWithoutIcons
+func printFilesAndFolderWithoutIcons(prefix string, file os.FileInfo) string {
+	var format string
+	if file.IsDir() {
+		format = fmt.Sprintf("%s%s%s%s%s", prefix, module.Bold, module.Pink, file.Name(), module.Reset)
+	} else {
+		format = fmt.Sprintf("%s%s", prefix, file.Name())
 	}
 	return format
 }
