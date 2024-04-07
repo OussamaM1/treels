@@ -41,7 +41,7 @@ This command will list all files and directories in the `current` directory.
 ![](example/example-all.png)
 
 ```bash
-treels -t /Users/
+treels -t /Project/treels
 ```
 
 This command will display the tree view of the `/Project/treels/` directory.
