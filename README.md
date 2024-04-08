@@ -39,7 +39,7 @@ treels -a
 
 This command will list all files and directories in the `current` directory.
 
-![](example/example-all.png)
+![](example/example-treels-a.png)
 
 ```bash
 treels -t /Project/treels
@@ -47,7 +47,7 @@ treels -t /Project/treels
 
 This command will display the tree view of the `/Project/treels/` directory.
 
-![](example/example-tree.png)
+![](example/example-treels-t.png)
 
 ```bash
 treels -it /Project/treels
@@ -55,4 +55,4 @@ treels -it /Project/treels
 
 This command will display the tree view without icons of the `/Project/treels/` directory.
 
-![](example/example-tree-no-icons.png)
+![](example/example-treels-it.png)
