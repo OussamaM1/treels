@@ -57,6 +57,8 @@ func printWithIconAndPrefix(prefix string, file os.FileInfo) string {
 		switch {
 		case strings.HasSuffix(file.Name(), module.Github), strings.HasSuffix(file.Name(), module.GitFolder):
 			format = printIconFolders(prefix, file, module.GitFolder)
+		case strings.HasSuffix(file.Name(), module.IntellijFolder):
+			format = printIconFolders(prefix, file, module.IntellijFolder)
 		default:
 			format = printIconFolders(prefix, file, module.Folder)
 		}
@@ -71,6 +73,18 @@ func printWithIconAndPrefix(prefix string, file os.FileInfo) string {
 		format = printIconFiles(prefix, file, module.Md)
 	case strings.HasSuffix(file.Name(), module.Gitignore):
 		format = printIconFiles(prefix, file, module.Gitignore)
+	case strings.HasSuffix(file.Name(), module.Yaml), strings.HasSuffix(file.Name(), module.Yml):
+		format = printIconFiles(prefix, file, module.Yml)
+	case strings.HasSuffix(file.Name(), module.JSON):
+		format = printIconFiles(prefix, file, module.JSON)
+	case strings.HasSuffix(file.Name(), module.SQL), strings.HasSuffix(file.Name(), module.Pls), strings.HasSuffix(file.Name(), module.Plb):
+		format = printIconFiles(prefix, file, module.SQL)
+	case strings.HasSuffix(file.Name(), module.Java), strings.HasSuffix(file.Name(), module.Class):
+		format = printIconFiles(prefix, file, module.Java)
+	case strings.HasSuffix(file.Name(), module.Cpp):
+		format = printIconFiles(prefix, file, module.Cpp)
+	case strings.HasSuffix(file.Name(), module.C):
+		format = printIconFiles(prefix, file, module.C)
 	default:
 		// Default file icon
 		format = printIconFiles(prefix, file, module.File)
@@ -88,6 +102,18 @@ func printIconFiles(prefix string, file os.FileInfo, extension string) string {
 		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Grey, module.Markdown, module.Reset, file.Name())
 	case module.Gitignore:
 		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Orange, module.Git, module.Reset, file.Name())
+	case module.JSON:
+		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Yellow, module.JSONIcon, module.Reset, file.Name())
+	case module.Yml, module.Yaml:
+		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightGreen, module.YamlIcon, module.Reset, file.Name())
+	case module.Pls, module.Plb, module.SQL:
+		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Red, module.Database, module.Reset, file.Name())
+	case module.Java, module.Class:
+		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightRed, module.JavaLang, module.Reset, file.Name())
+	case module.Cpp:
+		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightBlue, module.CppLang, module.Reset, file.Name())
+	case module.C:
+		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightBlue, module.CLang, module.Reset, file.Name())
 	default:
 		format = fmt.Sprintf("%s%s %s", prefix, module.File, file.Name())
 	}
@@ -100,13 +126,15 @@ func printIconFolders(prefix string, file os.FileInfo, extension string) string 
 	switch extension {
 	case module.Github, module.GitFolder:
 		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.Orange, module.Git, file.Name(), module.Reset)
+	case module.IntellijFolder:
+		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.LightBlue, module.Intellij, file.Name(), module.Reset)
 	default:
 		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.Pink, module.Folder, file.Name(), module.Reset)
 	}
 	return format
 }
 
-// printFilesAndFolderWithoutIcons
+// printFilesAndFolderWithoutIcons func - prints Files/Folder without icons
 func printFilesAndFolderWithoutIcons(prefix string, file os.FileInfo) string {
 	var format string
 	if file.IsDir() {
