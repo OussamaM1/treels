@@ -6,7 +6,14 @@ import (
 	"github.com/oussamaM1/treels/module"
 	"log"
 	"os"
+	"sort"
 	"strings"
+)
+
+// Define constant for formatting
+const (
+	IconFileFormat   = "%s%s%s %s%s"
+	IconFolderFormat = "%s%s%s%s %s%s"
 )
 
 // CheckDefaultDirectory func - returns current working directory if no directory is specified
@@ -97,23 +104,23 @@ func printIconFiles(prefix string, file os.FileInfo, extension string) string {
 	var format string
 	switch extension {
 	case module.Go, module.Mod, module.Sum:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightBlue, module.GoLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.GoLang, module.Reset, file.Name())
 	case module.Md:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Grey, module.Markdown, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Grey, module.Markdown, module.Reset, file.Name())
 	case module.Gitignore:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Orange, module.Git, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.Git, module.Reset, file.Name())
 	case module.JSON:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Yellow, module.JSONIcon, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Yellow, module.JSONIcon, module.Reset, file.Name())
 	case module.Yml, module.Yaml:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightGreen, module.YamlIcon, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightGreen, module.YamlIcon, module.Reset, file.Name())
 	case module.Pls, module.Plb, module.SQL:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.Red, module.Database, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Red, module.Database, module.Reset, file.Name())
 	case module.Java, module.Class:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightRed, module.JavaLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightRed, module.JavaLang, module.Reset, file.Name())
 	case module.Cpp:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightBlue, module.CppLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CppLang, module.Reset, file.Name())
 	case module.C:
-		format = fmt.Sprintf("%s%s%s %s%s", prefix, module.LightBlue, module.CLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CLang, module.Reset, file.Name())
 	default:
 		format = fmt.Sprintf("%s%s %s", prefix, module.File, file.Name())
 	}
@@ -125,11 +132,11 @@ func printIconFolders(prefix string, file os.FileInfo, extension string) string 
 	var format string
 	switch extension {
 	case module.Github, module.GitFolder:
-		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.Orange, module.Git, file.Name(), module.Reset)
+		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.Orange, module.Git, file.Name(), module.Reset)
 	case module.IntellijFolder:
-		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.LightBlue, module.Intellij, file.Name(), module.Reset)
+		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.LightBlue, module.Intellij, file.Name(), module.Reset)
 	default:
-		format = fmt.Sprintf("%s%s%s%s %s%s", prefix, module.Bold, module.Pink, module.Folder, file.Name(), module.Reset)
+		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.Pink, module.Folder, file.Name(), module.Reset)
 	}
 	return format
 }
@@ -143,4 +150,13 @@ func printFilesAndFolderWithoutIcons(prefix string, file os.FileInfo) string {
 		format = fmt.Sprintf("%s%s", prefix, file.Name())
 	}
 	return format
+}
+
+// sortSlice func - sorts a slice of os.FileInfo objects alphabetically by file name.
+// It modifies the original slice in place.
+func sortSlice(files []os.FileInfo) {
+	// Sort files by name
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].Name() < files[j].Name()
+	})
 }
