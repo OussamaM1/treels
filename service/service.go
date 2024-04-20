@@ -3,12 +3,10 @@ package service
 
 import (
 	"fmt"
+	"github.com/oussamaM1/treels/module"
 	"log"
 	"os"
 	"path/filepath"
-	"sort"
-
-	"github.com/oussamaM1/treels/module"
 )
 
 const (
@@ -39,10 +37,8 @@ func listDirectory(options module.Options) {
 		log.Fatalf("Error reading directory: %s\n", err)
 	}
 
-	// Sort files by name
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
-	})
+	// sort files by name
+	sortSlice(files)
 
 	// Print files and directories
 	for _, file := range files {
@@ -68,19 +64,28 @@ func treeDirectory(options module.Options, indent string, isLastFolder bool) {
 	}
 
 	// Sort files by name
-	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
-	})
+	sortSlice(files)
 
 	// Print files and directories
+	printFilesAndDirectoriesTreeFormat(files, options, indent, isLastFolder)
+}
+
+func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
+	for i := len(files) - 1; i >= 0; i-- {
+		if !isHidden(files[i].Name()) || showHidden {
+			return i
+		}
+	}
+	return -1
+}
+
+// printFilesAndDirectoriesTreeFormat - prints files and directories in tree format
+func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Options, indent string, isLastFolder bool) {
 	lastVisibleIndex := getLastVisibleIndex(files, options.Flags.ShowHidden)
 	for i, file := range files {
 		if !isHidden(file.Name()) || options.Flags.ShowHidden {
 			var prefix, childIndentNext string
 			if i == lastVisibleIndex && isLastFolder {
-				prefix = indent + boxUpAndRight
-				childIndentNext = indent + whiteSpaces
-			} else if i == lastVisibleIndex {
 				prefix = indent + boxUpAndRight
 				childIndentNext = indent + whiteSpaces
 			} else {
@@ -101,13 +106,4 @@ func treeDirectory(options module.Options, indent string, isLastFolder bool) {
 			}
 		}
 	}
-}
-
-func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
-	for i := len(files) - 1; i >= 0; i-- {
-		if !isHidden(files[i].Name()) || showHidden {
-			return i
-		}
-	}
-	return -1
 }
