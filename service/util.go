@@ -92,6 +92,12 @@ func printWithIconAndPrefix(prefix string, file os.FileInfo) string {
 		format = printIconFiles(prefix, file, module.Cpp)
 	case strings.HasSuffix(file.Name(), module.C):
 		format = printIconFiles(prefix, file, module.C)
+	case strings.HasSuffix(file.Name(), module.Javascript):
+		format = printIconFiles(prefix, file, module.Javascript)
+	case strings.HasSuffix(file.Name(), module.Python):
+		format = printIconFiles(prefix, file, module.Python)
+	case strings.HasSuffix(file.Name(), module.Rust):
+		format = printIconFiles(prefix, file, module.Rust)
 	default:
 		// Default file icon
 		format = printIconFiles(prefix, file, module.File)
@@ -121,6 +127,12 @@ func printIconFiles(prefix string, file os.FileInfo, extension string) string {
 		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CppLang, module.Reset, file.Name())
 	case module.C:
 		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CLang, module.Reset, file.Name())
+	case module.Javascript:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightYellow, module.JavascriptLang, module.Reset, file.Name())
+	case module.Rust:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.RustLang, module.Reset, file.Name())
+	case module.Python:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Blue, module.PythonLang, module.Reset, file.Name())
 	default:
 		format = fmt.Sprintf("%s%s %s", prefix, module.File, file.Name())
 	}
