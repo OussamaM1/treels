@@ -20,4 +20,7 @@ const (
 	Class          string = ".class"     // Class - class extension
 	Cpp            string = ".cpp"       // Cpp - cpp extension
 	C              string = ".c"         // C - c extension
+	Javascript     string = ".js"        // Javascript - javascript extension
+	Rust           string = ".rs"        // Rust - rust extension
+	Python         string = ".py"        // Python - python extension
 )
