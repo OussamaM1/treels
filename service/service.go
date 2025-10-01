@@ -14,11 +14,12 @@ const (
 	boxUpAndRight            = "└── " // BOX DRAWINGS HEAVY UP AND RIGHT
 	boxLightVertical         = "│   " // BOX DRAWINGS LIGHT VERTICAL
 	boxLightVerticalAndRight = "├── " // BOX DRAWINGS LIGHT VERTICAL AND RIGHT
+	dot                      = "."
 )
 
 // Dispatcher func - executes function based on flags
 func Dispatcher(options module.Options) {
-	fmt.Println(".")
+	fmt.Println(dot)
 	if options.Flags.ShowTreeView {
 		treeDirectory(options, "", true)
 	} else {
@@ -83,27 +84,46 @@ func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
 func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Options, indent string, isLastFolder bool) {
 	lastVisibleIndex := getLastVisibleIndex(files, options.Flags.ShowHidden)
 	for i, file := range files {
-		if !isHidden(file.Name()) || options.Flags.ShowHidden {
-			var prefix, childIndentNext string
-			if i == lastVisibleIndex && isLastFolder {
-				prefix = indent + boxUpAndRight
-				childIndentNext = indent + whiteSpaces
-			} else {
-				prefix = indent + boxLightVerticalAndRight
-				childIndentNext = indent + boxLightVertical
-			}
+		if !shouldShowFile(file, options.Flags.ShowHidden) {
+			continue
+		}
 
-			if !options.Flags.HideIcon {
-				fmt.Println(printWithIconAndPrefix(prefix, file))
-			} else {
-				fmt.Println(printFilesAndFolderWithoutIcons(prefix, file))
-			}
+		isLast := i == lastVisibleIndex
+		prefix, childIndent := calculateIndent(indent, isLast)
 
-			if file.IsDir() {
-				newDirectory := filepath.Join(options.Directory, file.Name())
-				newIsLastFolder := i == lastVisibleIndex && isLastFolder
-				treeDirectory(module.Options{Directory: newDirectory, Flags: module.Flags{ShowHidden: options.Flags.ShowHidden, HideIcon: options.Flags.HideIcon}}, childIndentNext, newIsLastFolder)
-			}
+		printFileWithPrefix(prefix, file, options.Flags.HideIcon)
+
+		if file.IsDir() {
+			processDirectory(file, options, childIndent, isLast && isLastFolder)
 		}
 	}
+}
+
+// shouldShowFile determines if a file should be displayed based on visibility settings
+func shouldShowFile(file os.FileInfo, showHidden bool) bool {
+	return !isHidden(file.Name()) || showHidden
+}
+
+// calculateIndent returns the appropriate prefix and child indent strings
+func calculateIndent(indent string, isLast bool) (prefix, childIndent string) {
+	if isLast {
+		return indent + boxUpAndRight, indent + whiteSpaces
+	}
+	return indent + boxLightVerticalAndRight, indent + boxLightVertical
+}
+
+// printFileWithPrefix prints the file with the given prefix and icon settings
+func printFileWithPrefix(prefix string, file os.FileInfo, hideIcon bool) {
+	if hideIcon {
+		fmt.Println(printFilesAndFolderWithoutIcons(prefix, file))
+	} else {
+		fmt.Println(printWithIconAndPrefix(prefix, file))
+	}
+}
+
+// processDirectory recursively processes a subdirectory
+func processDirectory(file os.FileInfo, options module.Options, childIndent string, isLastFolder bool) {
+	newOpts := options
+	newOpts.Directory = filepath.Join(options.Directory, file.Name())
+	treeDirectory(newOpts, childIndent, isLastFolder)
 }
