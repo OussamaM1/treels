@@ -67,7 +67,7 @@ func printWithIconAndPrefix(prefix string, file os.FileInfo) string {
 		case strings.HasSuffix(file.Name(), module.IntellijFolder):
 			format = printIconFolders(prefix, file, module.IntellijFolder)
 		default:
-			format = printIconFolders(prefix, file, module.Folder)
+			format = printIconFolders(prefix, file, module.FolderIcon)
 		}
 		return format
 	}
@@ -92,15 +92,67 @@ func printWithIconAndPrefix(prefix string, file os.FileInfo) string {
 		format = printIconFiles(prefix, file, module.Cpp)
 	case strings.HasSuffix(file.Name(), module.C):
 		format = printIconFiles(prefix, file, module.C)
-	case strings.HasSuffix(file.Name(), module.Javascript):
-		format = printIconFiles(prefix, file, module.Javascript)
-	case strings.HasSuffix(file.Name(), module.Python):
-		format = printIconFiles(prefix, file, module.Python)
-	case strings.HasSuffix(file.Name(), module.Rust):
-		format = printIconFiles(prefix, file, module.Rust)
+	case strings.HasSuffix(file.Name(), module.Js):
+		format = printIconFiles(prefix, file, module.Js)
+	case strings.HasSuffix(file.Name(), module.Jsx):
+		format = printIconFiles(prefix, file, module.Jsx)
+	case strings.HasSuffix(file.Name(), module.Ts), strings.HasSuffix(file.Name(), module.Tsx):
+		format = printIconFiles(prefix, file, module.Ts)
+	case strings.HasSuffix(file.Name(), module.HTML), strings.HasSuffix(file.Name(), module.Htm):
+		format = printIconFiles(prefix, file, module.HTML)
+	case strings.HasSuffix(file.Name(), module.CSS), strings.HasSuffix(file.Name(), module.Scss), strings.HasSuffix(file.Name(), module.Sass):
+		format = printIconFiles(prefix, file, module.CSS)
+	case strings.HasSuffix(file.Name(), module.Vue):
+		format = printIconFiles(prefix, file, module.Vue)
+	case strings.HasSuffix(file.Name(), module.Py):
+		format = printIconFiles(prefix, file, module.Py)
+	case strings.HasSuffix(file.Name(), module.Rs):
+		format = printIconFiles(prefix, file, module.Rs)
+	case strings.HasSuffix(file.Name(), module.Rb), strings.HasSuffix(file.Name(), module.Rake), file.Name() == module.Gemfile:
+		format = printIconFiles(prefix, file, module.Rb)
+	case strings.HasSuffix(file.Name(), module.Php):
+		format = printIconFiles(prefix, file, module.Php)
+	case strings.HasSuffix(file.Name(), module.Swift):
+		format = printIconFiles(prefix, file, module.Swift)
+	case strings.HasSuffix(file.Name(), module.Kt), strings.HasSuffix(file.Name(), module.Kts):
+		format = printIconFiles(prefix, file, module.Kt)
+	case strings.HasSuffix(file.Name(), module.Cs), strings.HasSuffix(file.Name(), module.Csx):
+		format = printIconFiles(prefix, file, module.Cs)
+	case strings.HasSuffix(file.Name(), module.XML):
+		format = printIconFiles(prefix, file, module.XML)
+	case strings.HasSuffix(file.Name(), module.Sh), strings.HasSuffix(file.Name(), module.Bash), strings.HasSuffix(file.Name(), module.Zsh):
+		format = printIconFiles(prefix, file, module.Sh)
+	case file.Name() == module.Dockerfile, strings.HasSuffix(file.Name(), module.Dockerignore):
+		format = printIconFiles(prefix, file, module.Dockerfile)
+	case strings.HasSuffix(file.Name(), module.Conf), strings.HasSuffix(file.Name(), module.Cfg), strings.HasSuffix(file.Name(), module.Ini), strings.HasSuffix(file.Name(), module.Env):
+		format = printIconFiles(prefix, file, module.Conf)
+	case file.Name() == module.Makefile, strings.HasSuffix(file.Name(), module.Make):
+		format = printIconFiles(prefix, file, module.Makefile)
+	case file.Name() == module.PackageJSON:
+		format = printIconFiles(prefix, file, module.PackageJSON)
+	case strings.HasSuffix(file.Name(), module.Tf), strings.HasSuffix(file.Name(), module.Tfvars):
+		format = printIconFiles(prefix, file, module.Tf)
+	case strings.HasSuffix(file.Name(), module.Png), strings.HasSuffix(file.Name(), module.Jpg), strings.HasSuffix(file.Name(), module.Jpeg), strings.HasSuffix(file.Name(), module.Gif), strings.HasSuffix(file.Name(), module.Svg), strings.HasSuffix(file.Name(), module.Ico):
+		format = printIconFiles(prefix, file, module.Png)
+	case strings.HasSuffix(file.Name(), module.Mp4), strings.HasSuffix(file.Name(), module.Avi), strings.HasSuffix(file.Name(), module.Mov), strings.HasSuffix(file.Name(), module.Mkv):
+		format = printIconFiles(prefix, file, module.Mp4)
+	case strings.HasSuffix(file.Name(), module.Mp3), strings.HasSuffix(file.Name(), module.Wav), strings.HasSuffix(file.Name(), module.Flac):
+		format = printIconFiles(prefix, file, module.Mp3)
+	case strings.HasSuffix(file.Name(), module.Zip), strings.HasSuffix(file.Name(), module.Tar), strings.HasSuffix(file.Name(), module.Gz), strings.HasSuffix(file.Name(), module.Rar), strings.HasSuffix(file.Name(), module.SevenZ):
+		format = printIconFiles(prefix, file, module.Zip)
+	case strings.HasSuffix(file.Name(), module.Pdf):
+		format = printIconFiles(prefix, file, module.Pdf)
+	case strings.HasSuffix(file.Name(), module.Lock):
+		format = printIconFiles(prefix, file, module.Lock)
+	case strings.HasSuffix(file.Name(), module.Key), strings.HasSuffix(file.Name(), module.Pem), strings.HasSuffix(file.Name(), module.Crt), strings.HasSuffix(file.Name(), module.Pub):
+		format = printIconFiles(prefix, file, module.Key)
+	case strings.HasSuffix(file.Name(), module.Log):
+		format = printIconFiles(prefix, file, module.Log)
+	case strings.HasSuffix(file.Name(), module.Txt):
+		format = printIconFiles(prefix, file, module.Txt)
 	default:
 		// Default file icon
-		format = printIconFiles(prefix, file, module.File)
+		format = printIconFiles(prefix, file, module.FileIcon)
 	}
 	return format
 }
@@ -110,31 +162,83 @@ func printIconFiles(prefix string, file os.FileInfo, extension string) string {
 	var format string
 	switch extension {
 	case module.Go, module.Mod, module.Sum:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.GoLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.GoLangIcon, module.Reset, file.Name())
 	case module.Md:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.Grey, module.Markdown, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Grey, module.MarkdownIcon, module.Reset, file.Name())
 	case module.Gitignore:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.Git, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.GitIcon, module.Reset, file.Name())
 	case module.JSON:
 		format = fmt.Sprintf(IconFileFormat, prefix, module.Yellow, module.JSONIcon, module.Reset, file.Name())
 	case module.Yml, module.Yaml:
 		format = fmt.Sprintf(IconFileFormat, prefix, module.LightGreen, module.YamlIcon, module.Reset, file.Name())
 	case module.Pls, module.Plb, module.SQL:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.Red, module.Database, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Red, module.DatabaseIcon, module.Reset, file.Name())
 	case module.Java, module.Class:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.LightRed, module.JavaLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightRed, module.JavaLangIcon, module.Reset, file.Name())
 	case module.Cpp:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CppLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CppLangIcon, module.Reset, file.Name())
 	case module.C:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CLang, module.Reset, file.Name())
-	case module.Javascript:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.LightYellow, module.JavascriptLang, module.Reset, file.Name())
-	case module.Rust:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.RustLang, module.Reset, file.Name())
-	case module.Python:
-		format = fmt.Sprintf(IconFileFormat, prefix, module.Blue, module.PythonLang, module.Reset, file.Name())
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CLangIcon, module.Reset, file.Name())
+	case module.Js:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightYellow, module.JavascriptLangIcon, module.Reset, file.Name())
+	case module.Rs:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.RustLangIcon, module.Reset, file.Name())
+	case module.Py:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Blue, module.PythonLangIcon, module.Reset, file.Name())
+	case module.Ts, module.Tsx:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Blue, module.TypeScriptIcon, module.Reset, file.Name())
+	case module.HTML, module.Htm:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.HTMLIcon, module.Reset, file.Name())
+	case module.CSS, module.Scss, module.Sass:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightBlue, module.CSSIcon, module.Reset, file.Name())
+	case module.Jsx:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Cyan, module.ReactIcon, module.Reset, file.Name())
+	case module.Vue:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.LightGreen, module.VueIcon, module.Reset, file.Name())
+	case module.Dockerfile, module.Dockerignore:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Cyan, module.DockerIcon, module.Reset, file.Name())
+	case module.Sh, module.Bash, module.Zsh:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Green, module.ShellIcon, module.Reset, file.Name())
+	case module.Rb, module.Rake, module.Gemfile:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Red, module.RubyIcon, module.Reset, file.Name())
+	case module.Php:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Purple, module.PHPIcon, module.Reset, file.Name())
+	case module.Swift:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.SwiftIcon, module.Reset, file.Name())
+	case module.Kt, module.Kts:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Purple, module.KotlinIcon, module.Reset, file.Name())
+	case module.Cs, module.Csx:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Green, module.CSharpIcon, module.Reset, file.Name())
+	case module.XML:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.XMLIcon, module.Reset, file.Name())
+	case module.Pdf:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Red, module.PDFIcon, module.Reset, file.Name())
+	case module.Png, module.Jpg, module.Jpeg, module.Gif, module.Svg, module.Ico:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Magenta, module.ImageIcon, module.Reset, file.Name())
+	case module.Mp4, module.Avi, module.Mov, module.Mkv:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Purple, module.VideoIcon, module.Reset, file.Name())
+	case module.Mp3, module.Wav, module.Flac:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Cyan, module.AudioIcon, module.Reset, file.Name())
+	case module.Zip, module.Tar, module.Gz, module.Rar, module.SevenZ:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Yellow, module.ArchiveIcon, module.Reset, file.Name())
+	case module.Txt:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Grey, module.TextIcon, module.Reset, file.Name())
+	case module.Conf, module.Cfg, module.Ini, module.Env:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Grey, module.ConfigIcon, module.Reset, file.Name())
+	case module.Lock:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Yellow, module.LockIcon, module.Reset, file.Name())
+	case module.Key, module.Pem, module.Crt, module.Pub:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Yellow, module.KeyIcon, module.Reset, file.Name())
+	case module.Log:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Grey, module.LogIcon, module.Reset, file.Name())
+	case module.Makefile, module.Make:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Orange, module.MakefileIcon, module.Reset, file.Name())
+	case module.PackageJSON:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Red, module.NPMIcon, module.Reset, file.Name())
+	case module.Tf, module.Tfvars:
+		format = fmt.Sprintf(IconFileFormat, prefix, module.Purple, module.TerraformIcon, module.Reset, file.Name())
 	default:
-		format = fmt.Sprintf("%s%s %s", prefix, module.File, file.Name())
+		format = fmt.Sprintf("%s%s %s", prefix, module.FileIcon, file.Name())
 	}
 	return format
 }
@@ -144,11 +248,11 @@ func printIconFolders(prefix string, file os.FileInfo, extension string) string 
 	var format string
 	switch extension {
 	case module.Github, module.GitFolder:
-		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.Orange, module.Git, file.Name(), module.Reset)
+		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.Orange, module.GitIcon, file.Name(), module.Reset)
 	case module.IntellijFolder:
-		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.LightBlue, module.Intellij, file.Name(), module.Reset)
+		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.LightBlue, module.IntellijIcon, file.Name(), module.Reset)
 	default:
-		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.Pink, module.Folder, file.Name(), module.Reset)
+		format = fmt.Sprintf(IconFolderFormat, prefix, module.Bold, module.Pink, module.FolderIcon, file.Name(), module.Reset)
 	}
 	return format
 }
