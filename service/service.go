@@ -19,16 +19,18 @@ const (
 
 // Dispatcher func - executes function based on flags
 func Dispatcher(options module.Options) {
+	var fileCount, dirCount int
 	fmt.Println(dot)
 	if options.Flags.ShowTreeView {
-		treeDirectory(options, "", true)
+		fileCount, dirCount = treeDirectory(options, "", true)
 	} else {
-		listDirectory(options)
+		fileCount, dirCount = listDirectory(options)
 	}
+	printNumberOfFilesAndDirectories(fileCount, dirCount)
 }
 
 // listDirectory func - lists the content of the directory.
-func listDirectory(options module.Options) {
+func listDirectory(options module.Options) (fileCount, dirCount int) {
 	CheckDefaultDirectory(&options.Directory)
 
 	// Open and read the directory
@@ -44,6 +46,11 @@ func listDirectory(options module.Options) {
 	// Print files and directories
 	for _, file := range files {
 		if !isHidden(file.Name()) || options.Flags.ShowHidden {
+			if file.IsDir() {
+				dirCount++
+			} else {
+				fileCount++
+			}
 			if !options.Flags.HideIcon {
 				fmt.Println(printWithIconAndPrefix("", file))
 			} else {
@@ -51,10 +58,11 @@ func listDirectory(options module.Options) {
 			}
 		}
 	}
+	return fileCount, dirCount
 }
 
 // treeDirectory func - displays a tree view of the directory.
-func treeDirectory(options module.Options, indent string, isLastFolder bool) {
+func treeDirectory(options module.Options, indent string, isLastFolder bool) (fileCount, dirCount int) {
 	CheckDefaultDirectory(&options.Directory)
 
 	// Open and read the directory
@@ -68,7 +76,8 @@ func treeDirectory(options module.Options, indent string, isLastFolder bool) {
 	sortSlice(files)
 
 	// Print files and directories
-	printFilesAndDirectoriesTreeFormat(files, options, indent, isLastFolder)
+	fc, dc := printFilesAndDirectoriesTreeFormat(files, options, indent, isLastFolder)
+	return fc, dc
 }
 
 func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
@@ -81,7 +90,7 @@ func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
 }
 
 // printFilesAndDirectoriesTreeFormat - prints files and directories in tree format
-func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Options, indent string, isLastFolder bool) {
+func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Options, indent string, isLastFolder bool) (fileCount, dirCount int) {
 	lastVisibleIndex := getLastVisibleIndex(files, options.Flags.ShowHidden)
 	for i, file := range files {
 		if !shouldShowFile(file, options.Flags.ShowHidden) {
@@ -94,9 +103,15 @@ func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Opti
 		printFileWithPrefix(prefix, file, options.Flags.HideIcon)
 
 		if file.IsDir() {
-			processDirectory(file, options, childIndent, isLast && isLastFolder)
+			dirCount++
+			fc, dc := processDirectory(file, options, childIndent, isLast && isLastFolder)
+			fileCount += fc
+			dirCount += dc
+		} else {
+			fileCount++
 		}
 	}
+	return fileCount, dirCount
 }
 
 // shouldShowFile determines if a file should be displayed based on visibility settings
@@ -122,8 +137,13 @@ func printFileWithPrefix(prefix string, file os.FileInfo, hideIcon bool) {
 }
 
 // processDirectory recursively processes a subdirectory
-func processDirectory(file os.FileInfo, options module.Options, childIndent string, isLastFolder bool) {
+func processDirectory(file os.FileInfo, options module.Options, childIndent string, isLastFolder bool) (fileCount, dirCount int) {
 	newOpts := options
 	newOpts.Directory = filepath.Join(options.Directory, file.Name())
-	treeDirectory(newOpts, childIndent, isLastFolder)
+	return treeDirectory(newOpts, childIndent, isLastFolder)
+}
+
+// printNumberOfFilesAndDirectories returns number of files and directories
+func printNumberOfFilesAndDirectories(fileCount, dirCount int) {
+	fmt.Printf("\n%d directories, %d files\n", dirCount, fileCount)
 }
