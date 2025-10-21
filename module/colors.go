@@ -1,10 +1,10 @@
 // Package module - module/colors.go
 package module
 
+// ANSI color codes and text formatting constants for terminal output
 const (
 	Bold        string = "\033[1m"        // Bold - bold text format
 	Reset       string = "\033[0m"        // Reset - reset text format
-	LightPurple string = "\033[1;35m"     // LightPurple - color
 	Purple      string = "\033[35m"       // Purple - color
 	Blue        string = "\033[34m"       // Blue - color
 	LightBlue   string = "\033[1;36m"     // LightBlue - color

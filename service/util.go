@@ -4,6 +4,7 @@ package service
 import (
 	"fmt"
 	"github.com/oussamaM1/treels/module"
+	"golang.org/x/term"
 	"log"
 	"os"
 	"sort"
@@ -435,4 +436,79 @@ func sortSlice(files []os.FileInfo) {
 	sort.Slice(files, func(i, j int) bool {
 		return files[i].Name() < files[j].Name()
 	})
+}
+
+// getTerminalWidth returns the width of the terminal
+func getTerminalWidth() int {
+	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	if err != nil || width == 0 {
+		return 80 // default
+	}
+	return width
+}
+
+// stripANSI removes ANSI color codes to calculate actual string length
+func stripANSI(str string) string {
+	// Simple ANSI stripper - removes escape sequences
+	inEscape := false
+	var result strings.Builder
+
+	for i := 0; i < len(str); i++ {
+		if str[i] == '\x1b' && i+1 < len(str) && str[i+1] == '[' {
+			inEscape = true
+			continue
+		}
+		if inEscape {
+			if (str[i] >= 'A' && str[i] <= 'Z') || (str[i] >= 'a' && str[i] <= 'z') {
+				inEscape = false
+			}
+			continue
+		}
+		result.WriteByte(str[i])
+	}
+	return result.String()
+}
+
+// getVisibleLength returns the visible length of a string (excluding ANSI codes)
+func getVisibleLength(str string) int {
+	return len(stripANSI(str))
+}
+
+// printGrid prints entries in a grid layout
+func printGrid(entries []string, maxLen int) {
+	if len(entries) == 0 {
+		return
+	}
+
+	termWidth := getTerminalWidth()
+	columnWidth := maxLen + 4 // Add padding between columns
+
+	// Calculate number of columns that fit
+	numColumns := termWidth / columnWidth
+	if numColumns < 1 {
+		numColumns = 1
+	}
+
+	// Print entries in grid
+	for i := 0; i < len(entries); i++ {
+		entry := entries[i]
+		visibleLen := getVisibleLength(entry)
+
+		// Print entry
+		fmt.Print(entry)
+
+		// Add padding to align columns (except for last column in row)
+		if (i+1)%numColumns != 0 && i < len(entries)-1 {
+			padding := columnWidth - visibleLen
+			fmt.Print(strings.Repeat(" ", padding))
+		} else {
+			// New line at end of row
+			fmt.Println()
+		}
+	}
+
+	// Add final newline if needed
+	if len(entries)%numColumns != 0 {
+		fmt.Println()
+	}
 }

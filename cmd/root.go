@@ -23,7 +23,7 @@ var RootCommand = &cobra.Command{
 func Execute() {
 	FlagDefinition(&flag)
 	if err := RootCommand.Execute(); err != nil {
-		log.Fatalf(err.Error())
+		log.Fatalf("error executing command: %v", err)
 	}
 }
 
