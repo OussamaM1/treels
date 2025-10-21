@@ -231,4 +231,185 @@ const (
 
 	// Log represents the log file extension
 	Log string = ".log"
+
+	// Scala represents the Scala file extension
+	Scala string = ".scala"
+
+	// Ex represents the Elixir file extension
+	Ex string = ".ex"
+	// Exs represents the Elixir script file extension
+	Exs string = ".exs"
+
+	// Hs represents the Haskell file extension
+	Hs string = ".hs"
+
+	// Clj represents the Clojure file extension
+	Clj string = ".clj"
+
+	// Dart represents the Dart file extension
+	Dart string = ".dart"
+
+	// R represents the R programming language file extension
+	R string = ".r"
+	// Rmd represents the R Markdown file extension
+	Rmd string = ".rmd"
+
+	// Lua represents the Lua file extension
+	Lua string = ".lua"
+
+	// Pl represents the Perl file extension
+	Pl string = ".pl"
+	// Pm represents the Perl module file extension
+	Pm string = ".pm"
+
+	// Psql represents the PostgreSQL file extension
+	Psql string = ".psql"
+
+	// Wasm represents the WebAssembly file extension
+	Wasm string = ".wasm"
+
+	// Less represents the LESS file extension
+	Less string = ".less"
+	// Styl represents the Stylus file extension
+	Styl string = ".styl"
+
+	// NgComponent represents Angular component files
+	NgComponent string = ".component.ts"
+	// NgModule represents Angular module files
+	NgModule string = ".module.ts"
+	// NgService represents Angular service files
+	NgService string = ".ngservice.ts"
+
+	// Svelte represents the Svelte file extension
+	Svelte string = ".svelte"
+
+	// Prisma represents the Prisma schema file extension
+	Prisma string = ".prisma"
+
+	// Graphql represents the GraphQL file extension
+	Graphql string = ".graphql"
+	// Gql represents the GraphQL query file extension
+	Gql string = ".gql"
+
+	// Proto represents the Protocol Buffers file extension
+	Proto string = ".proto"
+
+	// License represents the LICENSE file
+	License string = "LICENSE"
+	// LicenseMd represents the LICENSE.md file
+	LicenseMd string = "LICENSE.md"
+
+	// Readme represents the README file
+	Readme string = "README"
+	// ReadmeMd represents the README.md file
+	ReadmeMd string = "README.md"
+
+	// YmlCI represents CI/CD yaml files
+	YmlCI string = ".gitlab-ci.yml"
+	// Jenkinsfile JenkinsFile represents Jenkins pipeline file
+	Jenkinsfile string = "Jenkinsfile"
+
+	// Vagrantfile represents the Vagrantfile
+	Vagrantfile string = "Vagrantfile"
+
+	// Procfile represents the Procfile (Heroku)
+	Procfile string = "Procfile"
+
+	// Editorconfig represents the editorconfig file
+	Editorconfig string = ".editorconfig"
+
+	// Eslintrc represents the eslint config file
+	Eslintrc string = ".eslintrc"
+	// EslintrcJSON represents the eslint JSON config
+	EslintrcJSON string = ".eslintrc.json"
+
+	// Prettierrc represents the prettier config file
+	Prettierrc string = ".prettierrc"
+	// Prettierignore represents the prettier ignore file
+	Prettierignore string = ".prettierignore"
+
+	// Babelrc represents the babel config file
+	Babelrc string = ".babelrc"
+
+	// WebpackConfig represents the webpack config file
+	WebpackConfig string = "webpack.config.js"
+
+	// ViteConfig represents the vite config file
+	ViteConfig string = "vite.config.js"
+
+	// TsConfig represents the TypeScript config file
+	TsConfig string = "tsconfig.json"
+
+	// CMakeLists represents the CMake file
+	CMakeLists string = "CMakeLists.txt"
+	// Cmake represents the CMake file extension
+	Cmake string = ".cmake"
+
+	// Gradle represents the Gradle file extension
+	Gradle string = ".gradle"
+	// GradleKts represents the Gradle Kotlin DSL file extension
+	GradleKts string = ".gradle.kts"
+
+	// Pom represents the Maven pom.xml file
+	Pom string = "pom.xml"
+
+	// Requirements represents Python requirements file
+	Requirements string = "requirements.txt"
+
+	// PoetryLock represents Poetry lock file
+	PoetryLock string = "poetry.lock"
+	// Pyproject represents Python project config
+	Pyproject string = "pyproject.toml"
+
+	// CargoToml represents Rust Cargo.toml file
+	CargoToml string = "Cargo.toml"
+	// CargoLock represents Rust Cargo.lock file
+	CargoLock string = "Cargo.lock"
+
+	// Sqlite represents SQLite database file
+	Sqlite string = ".sqlite"
+	// Db represents generic database file
+	Db string = ".db"
+
+	// Exe represents Windows executable
+	Exe string = ".exe"
+	// Dll represents Windows DLL
+	Dll string = ".dll"
+	// So represents Linux shared object
+	So string = ".so"
+	// Dylib represents macOS dynamic library
+	Dylib string = ".dylib"
+
+	// Doc represents Word document
+	Doc string = ".doc"
+	// Docx represents Word document (new format)
+	Docx string = ".docx"
+	// Xls represents Excel spreadsheet
+	Xls string = ".xls"
+	// Xlsx represents Excel spreadsheet (new format)
+	Xlsx string = ".xlsx"
+	// Ppt represents PowerPoint presentation
+	Ppt string = ".ppt"
+	// Pptx represents PowerPoint presentation (new format)
+	Pptx string = ".pptx"
+
+	// Ttf represents TrueType font
+	Ttf string = ".ttf"
+	// Otf represents OpenType font
+	Otf string = ".otf"
+	// Woff represents Web Open Font Format
+	Woff string = ".woff"
+	// Woff2 represents Web Open Font Format 2
+	Woff2 string = ".woff2"
+
+	// Cer represents certificate file
+	Cer string = ".cer"
+	// P12 represents PKCS#12 certificate
+	P12 string = ".p12"
+
+	// Toml represents TOML config file
+	Toml string = ".toml"
+
+	// Nix represents Nix file extension
+	Nix string = ".nix"
 )
