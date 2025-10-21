@@ -43,7 +43,10 @@ func listDirectory(options module.Options) (fileCount, dirCount int) {
 	// sort files by name
 	sortSlice(files)
 
-	// Print files and directories
+	// Collect formatted file entries
+	var entries []string
+	var maxLen int
+
 	for _, file := range files {
 		if !isHidden(file.Name()) || options.Flags.ShowHidden {
 			if file.IsDir() {
@@ -51,13 +54,27 @@ func listDirectory(options module.Options) (fileCount, dirCount int) {
 			} else {
 				fileCount++
 			}
+
+			var formatted string
 			if !options.Flags.HideIcon {
-				fmt.Println(printWithIconAndPrefix("", file))
+				formatted = printWithIconAndPrefix("", file)
 			} else {
-				fmt.Println(printFilesAndFolderWithoutIcons("", file))
+				formatted = printFilesAndFolderWithoutIcons("", file)
+			}
+
+			entries = append(entries, formatted)
+
+			// Track max visible length for column width
+			visibleLen := getVisibleLength(formatted)
+			if visibleLen > maxLen {
+				maxLen = visibleLen
 			}
 		}
 	}
+
+	// Print in grid format
+	printGrid(entries, maxLen)
+
 	return fileCount, dirCount
 }
 

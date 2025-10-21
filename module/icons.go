@@ -1,6 +1,8 @@
 // Package module - module/icons.go
 package module
 
+// Nerd Font icon constants for file types and programming languages
+// These Unicode characters require a Nerd Font to display correctly
 const (
 	FileIcon           string = "\uf15b" // FileIcon - default file icon
 	FolderIcon         string = "\ue5ff" // FolderIcon - default folder icon
@@ -38,7 +40,6 @@ const (
 	TextIcon           string = "\uf0f6" // TextIcon - txt icon
 	ConfigIcon         string = "\ue615" // ConfigIcon - conf, cfg, ini icon
 	LockIcon           string = "\uf023" // LockIcon - lock icon
-	KeyIcon            string = "\uf084" // KeyIcon - key, pem icon
 	LogIcon            string = "\uf18d" // LogIcon - log icon
 	MakefileIcon       string = "\ue673" // MakefileIcon - makefile icon
 	NPMIcon            string = "\ue71e" // NPMIcon - package.json icon
@@ -51,10 +52,8 @@ const (
 	RIcon              string = "\uf25d" // RIcon - r, rmd icon
 	LuaIcon            string = "\ue620" // LuaIcon - lua icon
 	PerlIcon           string = "\ue769" // PerlIcon - pl, pm icon
-	SassIcon           string = "\ue603" // SassIcon - sass, scss icon
 	LessIcon           string = "\ue758" // LessIcon - less icon
 	SvelteIcon         string = "\ue697" // SvelteIcon - svelte icon
-	AngularIcon        string = "\ue753" // AngularIcon - angular files
 	GraphQLIcon        string = "\ue766" // GraphQLIcon - graphql, gql icon
 	PrismaIcon         string = "\ue684" // PrismaIcon - prisma icon
 	ProtoIcon          string = "\ue60b" // ProtoIcon - proto icon
