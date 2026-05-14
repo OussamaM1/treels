@@ -3,7 +3,7 @@ Treels, a CLI tool built in Go, merges the tree and ls commands while introducin
 simplifying directory navigation and enhancing the command-line experience.
 
 > [!IMPORTANT]  
-> To ensure that icons are displayed correctly in the terminal, it's recommended to use Nerd fonts. For example, you can download the FiraCode Nerd Font from [here](https://github.com/ryanoasis/nerd-fonts/releases/download/v3.2.0/FiraCode.zip).
+> To ensure that icons are displayed correctly in the terminal, it's recommended to use Nerd fonts. For example, you can download the FiraCode Nerd Font from [here](https://github.com/ryanoasis/nerd-fonts/releases/).
 
 ## 🚀 Installation
 
