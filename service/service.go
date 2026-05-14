@@ -2,11 +2,14 @@
 package service
 
 import (
+	"errors"
 	"fmt"
-	"github.com/oussamaM1/treels/module"
-	"log"
+	"io"
 	"os"
 	"path/filepath"
+
+	"github.com/oussamaM1/treels/module"
+	"github.com/oussamaM1/treels/utils"
 )
 
 const (
@@ -18,27 +21,51 @@ const (
 )
 
 // Dispatcher func - executes function based on flags
-func Dispatcher(options module.Options) {
-	var fileCount, dirCount int
-	fmt.Println(dot)
-	if options.Flags.ShowTreeView {
-		fileCount, dirCount = treeDirectory(options, "", true)
-	} else {
-		fileCount, dirCount = listDirectory(options)
+func Dispatcher(options module.Options) error {
+	return dispatcher(options, os.Stdout)
+}
+
+func dispatcher(options module.Options, output io.Writer) error {
+	if err := CheckDefaultDirectory(&options.Directory); err != nil {
+		return err
 	}
-	printNumberOfFilesAndDirectories(fileCount, dirCount)
+	if err := utils.ValidateDirectory(options.Directory); err != nil {
+		return err
+	}
+
+	var fileCount, dirCount int
+	if _, err := fmt.Fprintln(output, dot); err != nil {
+		return err
+	}
+	if options.Flags.ShowTreeView {
+		var err error
+		fileCount, dirCount, err = treeDirectory(options, output, "", true)
+		if err != nil {
+			return err
+		}
+	} else {
+		var err error
+		fileCount, dirCount, err = listDirectory(options, output)
+		if err != nil {
+			return err
+		}
+	}
+	return printNumberOfFilesAndDirectories(output, fileCount, dirCount)
 }
 
 // listDirectory func - lists the content of the directory.
-func listDirectory(options module.Options) (fileCount, dirCount int) {
-	CheckDefaultDirectory(&options.Directory)
-
+func listDirectory(options module.Options, output io.Writer) (fileCount, dirCount int, err error) {
 	// Open and read the directory
 	files, d, err := readDirectory(options.Directory)
-	defer closeDirectory(d)
 	if err != nil {
-		log.Fatalf("Error reading directory: %s\n", err)
+		return 0, 0, fmt.Errorf("read directory %q: %w", options.Directory, err)
 	}
+	defer func() {
+		closeErr := closeDirectory(d)
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
 
 	// sort files by name
 	sortSlice(files)
@@ -73,28 +100,36 @@ func listDirectory(options module.Options) (fileCount, dirCount int) {
 	}
 
 	// Print in grid format
-	printGrid(entries, maxLen)
+	if err := printGrid(output, entries, maxLen); err != nil {
+		return 0, 0, err
+	}
 
-	return fileCount, dirCount
+	return fileCount, dirCount, nil
 }
 
 // treeDirectory func - displays a tree view of the directory.
-func treeDirectory(options module.Options, indent string, isLastFolder bool) (fileCount, dirCount int) {
-	CheckDefaultDirectory(&options.Directory)
-
+func treeDirectory(options module.Options, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
 	// Open and read the directory
 	files, d, err := readDirectory(options.Directory)
-	defer closeDirectory(d)
 	if err != nil {
-		log.Fatalf("Error reading directory: %s\n", err)
+		return 0, 0, fmt.Errorf("read directory %q: %w", options.Directory, err)
 	}
+	defer func() {
+		closeErr := closeDirectory(d)
+		if err == nil && closeErr != nil {
+			err = closeErr
+		}
+	}()
 
 	// Sort files by name
 	sortSlice(files)
 
 	// Print files and directories
-	fc, dc := printFilesAndDirectoriesTreeFormat(files, options, indent, isLastFolder)
-	return fc, dc
+	fc, dc, err := printFilesAndDirectoriesTreeFormat(files, options, output, indent, isLastFolder)
+	if err != nil {
+		return 0, 0, err
+	}
+	return fc, dc, nil
 }
 
 func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
@@ -107,7 +142,7 @@ func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
 }
 
 // printFilesAndDirectoriesTreeFormat - prints files and directories in tree format
-func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Options, indent string, isLastFolder bool) (fileCount, dirCount int) {
+func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Options, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
 	lastVisibleIndex := getLastVisibleIndex(files, options.Flags.ShowHidden)
 	for i, file := range files {
 		if !shouldShowFile(file, options.Flags.ShowHidden) {
@@ -117,18 +152,23 @@ func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Opti
 		isLast := i == lastVisibleIndex
 		prefix, childIndent := calculateIndent(indent, isLast)
 
-		printFileWithPrefix(prefix, file, options.Flags.HideIcon)
+		if err := printFileWithPrefix(output, prefix, file, options.Flags.HideIcon); err != nil {
+			return 0, 0, err
+		}
 
 		if file.IsDir() {
 			dirCount++
-			fc, dc := processDirectory(file, options, childIndent, isLast && isLastFolder)
+			fc, dc, err := processDirectory(file, options, output, childIndent, isLast && isLastFolder)
+			if err != nil {
+				return 0, 0, err
+			}
 			fileCount += fc
 			dirCount += dc
 		} else {
 			fileCount++
 		}
 	}
-	return fileCount, dirCount
+	return fileCount, dirCount, nil
 }
 
 // shouldShowFile determines if a file should be displayed based on visibility settings
@@ -145,22 +185,27 @@ func calculateIndent(indent string, isLast bool) (prefix, childIndent string) {
 }
 
 // printFileWithPrefix prints the file with the given prefix and icon settings
-func printFileWithPrefix(prefix string, file os.FileInfo, hideIcon bool) {
+func printFileWithPrefix(output io.Writer, prefix string, file os.FileInfo, hideIcon bool) error {
 	if hideIcon {
-		fmt.Println(printFilesAndFolderWithoutIcons(prefix, file))
-	} else {
-		fmt.Println(printWithIconAndPrefix(prefix, file))
+		_, err := fmt.Fprintln(output, printFilesAndFolderWithoutIcons(prefix, file))
+		return err
 	}
+
+	_, err := fmt.Fprintln(output, printWithIconAndPrefix(prefix, file))
+	return err
 }
 
 // processDirectory recursively processes a subdirectory
-func processDirectory(file os.FileInfo, options module.Options, childIndent string, isLastFolder bool) (fileCount, dirCount int) {
+func processDirectory(file os.FileInfo, options module.Options, output io.Writer, childIndent string, isLastFolder bool) (fileCount, dirCount int, err error) {
 	newOpts := options
 	newOpts.Directory = filepath.Join(options.Directory, file.Name())
-	return treeDirectory(newOpts, childIndent, isLastFolder)
+	return treeDirectory(newOpts, output, childIndent, isLastFolder)
 }
 
+var errGetwd = errors.New("get current working directory")
+
 // printNumberOfFilesAndDirectories returns number of files and directories
-func printNumberOfFilesAndDirectories(fileCount, dirCount int) {
-	fmt.Printf("\n%d directories, %d files\n", dirCount, fileCount)
+func printNumberOfFilesAndDirectories(output io.Writer, fileCount, dirCount int) error {
+	_, err := fmt.Fprintf(output, "\n%d directories, %d files\n", dirCount, fileCount)
+	return err
 }
