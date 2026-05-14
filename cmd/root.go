@@ -3,36 +3,40 @@ package cmd
 
 import (
 	"fmt"
+	"os"
+
 	"github.com/oussamaM1/treels/module"
 	"github.com/oussamaM1/treels/service"
-	"github.com/oussamaM1/treels/utils"
 	"github.com/spf13/cobra"
-	"log"
 )
-
-var flag module.Flags
-
-// RootCommand Command - is the root command for the application.
-var RootCommand = &cobra.Command{
-	Use:   "treels",
-	Short: "⚡ Treels is a CLI tool crafted in Go, merging tree and ls commands with intuitive merging and beautification features.",
-	Run:   run,
-}
 
 // Execute func - runs the root command.
 func Execute() {
-	FlagDefinition(&flag)
-	if err := RootCommand.Execute(); err != nil {
-		log.Fatalf("error executing command: %v", err)
+	if err := newRootCmd().Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
+		os.Exit(1)
 	}
 }
 
-func run(_ *cobra.Command, args []string) {
-	if utils.ValidateDirectoryArgs(args) {
-		service.Dispatcher(module.Options{Directory: args[len(args)-1], Flags: flag})
-	} else if len(args) == 0 {
-		service.Dispatcher(module.Options{Flags: flag})
-	} else {
-		fmt.Println("❌ Usage: treels [options] <directory_path>")
+func newRootCmd() *cobra.Command {
+	var flag module.Flags
+
+	cmd := &cobra.Command{
+		Use:   "treels [path]",
+		Short: "⚡ Treels is a CLI tool crafted in Go, merging tree and ls commands with intuitive merging and beautification features.",
+		Args:  cobra.MaximumNArgs(1),
+		RunE: func(_ *cobra.Command, args []string) error {
+			options := module.Options{Flags: flag}
+			if len(args) == 1 {
+				options.Directory = args[0]
+			}
+
+			return service.Dispatcher(options)
+		},
 	}
+
+	FlagDefinition(cmd, &flag)
+	cmd.SilenceUsage = true
+
+	return cmd
 }

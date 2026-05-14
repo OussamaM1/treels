@@ -3,9 +3,10 @@ package service
 
 import (
 	"fmt"
+	"io"
+
 	"github.com/oussamaM1/treels/module"
 	"golang.org/x/term"
-	"log"
 	"os"
 	"sort"
 	"strings"
@@ -18,15 +19,17 @@ const (
 )
 
 // CheckDefaultDirectory func - returns current working directory if no directory is specified
-func CheckDefaultDirectory(directory *string) {
+func CheckDefaultDirectory(directory *string) error {
 	if *directory == "" {
 		// Get the current working directory - default value
 		var err error
 		*directory, err = os.Getwd()
 		if err != nil {
-			log.Fatalf("Error getting current working directory: %s\n", err)
+			return fmt.Errorf("%w: %w", errGetwd, err)
 		}
 	}
+
+	return nil
 }
 
 // readDirectory func - opens and reads the directory.
@@ -39,17 +42,26 @@ func readDirectory(directory string) ([]os.FileInfo, *os.File, error) {
 	// Read the directory contents
 	files, err := d.Readdir(-1)
 	if err != nil {
+		if closeErr := d.Close(); closeErr != nil {
+			return nil, nil, fmt.Errorf("read directory %q: %w; close directory: %v", directory, err, closeErr)
+		}
 		return nil, nil, err
 	}
 	return files, d, nil
 }
 
 // closeDirectory func - closes the directory.
-func closeDirectory(directory *os.File) {
+func closeDirectory(directory *os.File) error {
+	if directory == nil {
+		return nil
+	}
+
 	err := directory.Close()
 	if err != nil {
-		log.Fatalf("Error while closing directory: %s\n", err)
+		return fmt.Errorf("close directory: %w", err)
 	}
+
+	return nil
 }
 
 // isHidden func - checks if the file name starts with a dot (hidden file).
@@ -474,10 +486,10 @@ func getVisibleLength(str string) int {
 	return len(stripANSI(str))
 }
 
-// printGrid prints entries in a grid layout
-func printGrid(entries []string, maxLen int) {
+// printGrid prints entries in a grid layout.
+func printGrid(output io.Writer, entries []string, maxLen int) error {
 	if len(entries) == 0 {
-		return
+		return nil
 	}
 
 	termWidth := getTerminalWidth()
@@ -495,20 +507,30 @@ func printGrid(entries []string, maxLen int) {
 		visibleLen := getVisibleLength(entry)
 
 		// Print entry
-		fmt.Print(entry)
+		if _, err := fmt.Fprint(output, entry); err != nil {
+			return err
+		}
 
 		// Add padding to align columns (except for last column in row)
 		if (i+1)%numColumns != 0 && i < len(entries)-1 {
 			padding := columnWidth - visibleLen
-			fmt.Print(strings.Repeat(" ", padding))
+			if _, err := fmt.Fprint(output, strings.Repeat(" ", padding)); err != nil {
+				return err
+			}
 		} else {
 			// New line at end of row
-			fmt.Println()
+			if _, err := fmt.Fprintln(output); err != nil {
+				return err
+			}
 		}
 	}
 
 	// Add final newline if needed
 	if len(entries)%numColumns != 0 {
-		fmt.Println()
+		if _, err := fmt.Fprintln(output); err != nil {
+			return err
+		}
 	}
+
+	return nil
 }
