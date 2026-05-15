@@ -45,6 +45,12 @@ func TestDispatcher_ListDirectory(t *testing.T) {
 			flags:        module.Flags{HideIcon: true, ShowHidden: true},
 			wantContains: []string{".", ".hidden", "alpha.go", "subpkg", "1 directories, 2 files"},
 		},
+		{
+			name:         "shows readable file and directory sizes",
+			flags:        module.Flags{HideIcon: true, ShowReadableSize: true},
+			wantContains: []string{"alpha.go (12 B)", "subpkg (", "1 directories, 1 files"},
+			wantMissing:  []string{".hidden"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -55,7 +61,7 @@ func TestDispatcher_ListDirectory(t *testing.T) {
 				t.Fatalf("dispatcher() error = %v, want nil", err)
 			}
 
-			got := output.String()
+			got := stripANSI(output.String())
 			for _, want := range tt.wantContains {
 				if !strings.Contains(got, want) {
 					t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
@@ -80,19 +86,42 @@ func TestDispatcher_TreeDirectory(t *testing.T) {
 	err := dispatcher(module.Options{
 		Directory: dir,
 		Flags: module.Flags{
-			HideIcon:     true,
-			ShowTreeView: true,
+			HideIcon:         true,
+			ShowTreeView:     true,
+			ShowReadableSize: true,
 		},
 	}, &output)
 	if err != nil {
 		t.Fatalf("dispatcher() error = %v, want nil", err)
 	}
 
-	got := output.String()
-	for _, want := range []string{"└── ", "subpkg", "nested.go", "1 directories, 2 files"} {
+	got := stripANSI(output.String())
+	for _, want := range []string{"└── ", "subpkg (", "nested.go (14 B)", "1 directories, 2 files"} {
 		if !strings.Contains(got, want) {
 			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
 		}
+	}
+}
+
+func TestHumanReadableSize(t *testing.T) {
+	tests := []struct {
+		name string
+		size int64
+		want string
+	}{
+		{name: "zero bytes", size: 0, want: "0 B"},
+		{name: "bytes", size: 42, want: "42 B"},
+		{name: "kilobytes", size: 2048, want: "2.0 KB"},
+		{name: "megabytes", size: 1536 * 1024, want: "1.5 MB"},
+		{name: "negative size", size: -1, want: "0 B"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := humanReadableSize(tt.size); got != tt.want {
+				t.Fatalf("humanReadableSize(%d) = %q, want %q", tt.size, got, tt.want)
+			}
+		})
 	}
 }
 

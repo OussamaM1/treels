@@ -82,12 +82,7 @@ func listDirectory(options module.Options, output io.Writer) (fileCount, dirCoun
 				fileCount++
 			}
 
-			var formatted string
-			if !options.Flags.HideIcon {
-				formatted = printWithIconAndPrefix("", file)
-			} else {
-				formatted = printFilesAndFolderWithoutIcons("", file)
-			}
+			formatted := formatFileWithOptions("", file, options.Flags)
 
 			entries = append(entries, formatted)
 
@@ -152,7 +147,7 @@ func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Opti
 		isLast := i == lastVisibleIndex
 		prefix, childIndent := calculateIndent(indent, isLast)
 
-		if err := printFileWithPrefix(output, prefix, file, options.Flags.HideIcon); err != nil {
+		if err := printFileWithPrefix(output, prefix, file, options.Flags); err != nil {
 			return 0, 0, err
 		}
 
@@ -185,14 +180,24 @@ func calculateIndent(indent string, isLast bool) (prefix, childIndent string) {
 }
 
 // printFileWithPrefix prints the file with the given prefix and icon settings
-func printFileWithPrefix(output io.Writer, prefix string, file os.FileInfo, hideIcon bool) error {
-	if hideIcon {
-		_, err := fmt.Fprintln(output, printFilesAndFolderWithoutIcons(prefix, file))
-		return err
+func printFileWithPrefix(output io.Writer, prefix string, file os.FileInfo, flags module.Flags) error {
+	_, err := fmt.Fprintln(output, formatFileWithOptions(prefix, file, flags))
+	return err
+}
+
+func formatFileWithOptions(prefix string, file os.FileInfo, flags module.Flags) string {
+	var formatted string
+	if flags.HideIcon {
+		formatted = printFilesAndFolderWithoutIcons(prefix, file)
+	} else {
+		formatted = printWithIconAndPrefix(prefix, file)
 	}
 
-	_, err := fmt.Fprintln(output, printWithIconAndPrefix(prefix, file))
-	return err
+	if flags.ShowReadableSize {
+		formatted = appendReadableSize(formatted, file.Size())
+	}
+
+	return formatted
 }
 
 // processDirectory recursively processes a subdirectory

@@ -441,6 +441,29 @@ func printFilesAndFolderWithoutIcons(prefix string, file os.FileInfo) string {
 	return format
 }
 
+func appendReadableSize(formatted string, size int64) string {
+	return fmt.Sprintf("%s (%s)", formatted, humanReadableSize(size))
+}
+
+func humanReadableSize(size int64) string {
+	if size < 0 {
+		size = 0
+	}
+	if size < 1024 {
+		return fmt.Sprintf("%d B", size)
+	}
+
+	units := []string{"KB", "MB", "GB", "TB", "PB"}
+	value := float64(size)
+	unitIndex := -1
+	for value >= 1024 && unitIndex < len(units)-1 {
+		value /= 1024
+		unitIndex++
+	}
+
+	return fmt.Sprintf("%.1f %s", value, units[unitIndex])
+}
+
 // sortSlice func - sorts a slice of os.FileInfo objects alphabetically by file name.
 // It modifies the original slice in place.
 func sortSlice(files []os.FileInfo) {
