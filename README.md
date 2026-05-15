@@ -12,7 +12,7 @@ To install the `treels` command-line tool, ensure you have Go 1.25.0 or newer in
 Once you have Go installed, open a terminal or command prompt and run the following command:
 
 ```bash
-go install github.com/oussamaM1/treels/
+go install github.com/oussamaM1/treels@latest
 ```
 
 This command will download the repository, build the `treels` executable, and place it in your Go binary directory. Make sure your Go binary directory is in your system's PATH so that you can execute `treels` from any directory.
