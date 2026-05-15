@@ -1,6 +1,7 @@
 package cmd
 
 import (
+	"bytes"
 	"io"
 	"os"
 	"path/filepath"
@@ -53,6 +54,33 @@ func TestRootCmd_IconFlagsRemoved(t *testing.T) {
 			}
 			if !strings.Contains(err.Error(), tt.want) {
 				t.Fatalf("Execute() error = %q, want to contain %q", err, tt.want)
+			}
+		})
+	}
+}
+
+func TestRootCmd_VersionFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "long flag", args: []string{"--version"}},
+		{name: "short flag", args: []string{"-v"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			cmd := newRootCmd()
+			cmd.SetOut(&output)
+			cmd.SetArgs(tt.args)
+
+			if err := cmd.Execute(); err != nil {
+				t.Fatalf("Execute() error = %v, want nil", err)
+			}
+
+			if got := output.String(); got != "treels v1.3.0\n" {
+				t.Fatalf("Execute() output = %q, want version output", got)
 			}
 		})
 	}
