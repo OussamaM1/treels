@@ -32,6 +32,32 @@ func TestRootCmd_TooManyArgs(t *testing.T) {
 	}
 }
 
+func TestRootCmd_IconFlagsRemoved(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{name: "long flag", args: []string{"--icon"}, want: "unknown flag: --icon"},
+		{name: "short flag", args: []string{"-i"}, want: "unknown shorthand flag: 'i'"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			cmd := newRootCmd()
+			cmd.SetArgs(tt.args)
+
+			err := cmd.Execute()
+			if err == nil {
+				t.Fatal("Execute() error = nil, want error")
+			}
+			if !strings.Contains(err.Error(), tt.want) {
+				t.Fatalf("Execute() error = %q, want to contain %q", err, tt.want)
+			}
+		})
+	}
+}
+
 func TestRootCmd_ValidPathWithFlags(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
@@ -40,7 +66,7 @@ func TestRootCmd_ValidPathWithFlags(t *testing.T) {
 
 	output := captureStdout(t, func() {
 		cmd := newRootCmd()
-		cmd.SetArgs([]string{"--tree", "--icon", dir})
+		cmd.SetArgs([]string{"--tree", "--no-icons", dir})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatalf("Execute() error = %v, want nil", err)
@@ -60,7 +86,7 @@ func TestRootCmd_ReadableFlag(t *testing.T) {
 
 	output := captureStdout(t, func() {
 		cmd := newRootCmd()
-		cmd.SetArgs([]string{"-r", "--icon", dir})
+		cmd.SetArgs([]string{"-r", "--no-icons", dir})
 
 		if err := cmd.Execute(); err != nil {
 			t.Fatalf("Execute() error = %v, want nil", err)
