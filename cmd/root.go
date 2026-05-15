@@ -10,6 +10,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
+const version = "v1.3.0"
+
 // Execute func - runs the root command.
 func Execute() {
 	if err := newRootCmd().Execute(); err != nil {
@@ -25,7 +27,12 @@ func newRootCmd() *cobra.Command {
 		Use:   "treels [path]",
 		Short: "⚡ Treels is a CLI tool crafted in Go, merging tree and ls commands with intuitive merging and beautification features.",
 		Args:  cobra.MaximumNArgs(1),
-		RunE: func(_ *cobra.Command, args []string) error {
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if flag.ShowVersion {
+				_, err := fmt.Fprintf(cmd.OutOrStdout(), "treels %s\n", version)
+				return err
+			}
+
 			options := module.Options{Flags: flag}
 			if len(args) == 1 {
 				options.Directory = args[0]

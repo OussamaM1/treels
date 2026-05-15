@@ -7,6 +7,7 @@ type Flags struct {
 	ShowTreeView     bool
 	HideIcon         bool
 	ShowReadableSize bool
+	ShowVersion      bool
 }
 
 // Options struct - Contains configuration options for directory listing.
