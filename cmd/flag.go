@@ -8,9 +8,8 @@ import (
 
 // FlagDefinition func - defines flags for the application.
 func FlagDefinition(cmd *cobra.Command, flags *module.Flags) {
-	flags.HideIcon = true
 	cmd.PersistentFlags().BoolVarP(&flags.ShowHidden, "all", "a", false, "List all files and directories")
 	cmd.PersistentFlags().BoolVarP(&flags.ShowTreeView, "tree", "t", false, "Tree view of the directory")
-	cmd.PersistentFlags().BoolVarP(&flags.HideIcon, "icon", "i", false, "Disable icons (Enabled by default)")
+	cmd.PersistentFlags().BoolVar(&flags.HideIcon, "no-icons", false, "Disable icons")
 	cmd.PersistentFlags().BoolVarP(&flags.ShowReadableSize, "readable", "r", false, "Show human-readable size for each file and directory")
 }

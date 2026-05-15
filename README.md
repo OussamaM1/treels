@@ -28,7 +28,8 @@ treels [Flags] [Path]
 - `-a, --all`: List all files and directories
 - `-h, --help`: Help for treels
 - `-t, --tree`: Tree view of the directory
-- `-i, --icon`: Disable icons (Enabled by default)
+- `--no-icons`: Disable icons
+- `-r, --readable`: Show human-readable size for each file and directory
 
 ## 📋 Example
 
@@ -49,7 +50,7 @@ This command will display the tree view of the `/Project/treels/` directory.
 ![](example/example-treels-t.png)
 
 ```bash
-treels -it /Project/treels
+treels -t --no-icons /Project/treels
 ```
 
 This command will display the tree view without icons of the `/Project/treels/` directory.
