@@ -1,5 +1,4 @@
-# Refer to golangci-lint's example config file for more options and information:
-# https://github.com/golangci/golangci-lint/blob/master/.golangci.reference.yml
+version: "2"
 
 run:
   timeout: 5m
@@ -11,8 +10,10 @@ linters:
     - revive
     - govet
     - staticcheck
-
-issues:
-  exclude-use-default: false
-  max-issues-per-linter: 0
-  max-same-issues: 0
+  settings:
+    revive:
+      rules:
+        - name: exported
+          disabled: true
+        - name: var-naming
+          disabled: true

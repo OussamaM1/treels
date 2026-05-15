@@ -22,5 +22,4 @@
 .vscode/
 
 # Dependency directories
-/go.sum
 /treels

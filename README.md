@@ -7,7 +7,7 @@ simplifying directory navigation and enhancing the command-line experience.
 
 ## 🚀 Installation
 
-To install the `treels` command-line tool, ensure you have Go installed on your system. If not, you can download and install it from the [official Go website](https://golang.org/dl/).
+To install the `treels` command-line tool, ensure you have Go 1.25.0 or newer installed on your system. If not, you can download and install it from the [official Go website](https://golang.org/dl/).
 
 Once you have Go installed, open a terminal or command prompt and run the following command:
 
