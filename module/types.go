@@ -3,9 +3,10 @@ package module
 
 // Flags struct - represents flags for the application.
 type Flags struct {
-	ShowHidden   bool
-	ShowTreeView bool
-	HideIcon     bool
+	ShowHidden       bool
+	ShowTreeView     bool
+	HideIcon         bool
+	ShowReadableSize bool
 }
 
 // Options struct - Contains configuration options for directory listing.

@@ -52,6 +52,26 @@ func TestRootCmd_ValidPathWithFlags(t *testing.T) {
 	}
 }
 
+func TestRootCmd_ReadableFlag(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"-r", "--icon", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	if !strings.Contains(output, "main.go (12 B)") {
+		t.Fatalf("Execute() output = %q, want readable file size", output)
+	}
+}
+
 func captureStdout(t *testing.T, run func()) string {
 	t.Helper()
 
