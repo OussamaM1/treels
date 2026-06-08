@@ -104,6 +104,132 @@ func TestDispatcher_TreeDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_ListDirectoryGitIgnore(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "*.log\nignored-dir/\n!keep.log\n")
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "debug.log"), "debug")
+	mustWriteFile(t, filepath.Join(dir, "keep.log"), "keep")
+	mustMkdir(t, filepath.Join(dir, "ignored-dir"))
+	mustWriteFile(t, filepath.Join(dir, "ignored-dir", "ignored.go"), "package ignored")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:         true,
+			RespectGitIgnore: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"main.go", "keep.log", "0 directories, 2 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	for _, missing := range []string{"debug.log", "ignored-dir"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
+func TestDispatcher_TreeDirectoryGitIgnore(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "node_modules/\ndist/*.js\n*.log\n!keep.log\n")
+	mustMkdir(t, filepath.Join(dir, "node_modules"))
+	mustWriteFile(t, filepath.Join(dir, "node_modules", "package.js"), "module")
+	mustMkdir(t, filepath.Join(dir, "dist"))
+	mustWriteFile(t, filepath.Join(dir, "dist", "app.js"), "app")
+	mustWriteFile(t, filepath.Join(dir, "dist", "style.css"), "style")
+	mustMkdir(t, filepath.Join(dir, "src"))
+	mustWriteFile(t, filepath.Join(dir, "src", "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "debug.log"), "debug")
+	mustWriteFile(t, filepath.Join(dir, "keep.log"), "keep")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:         true,
+			ShowTreeView:     true,
+			RespectGitIgnore: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"dist", "style.css", "src", "main.go", "keep.log", "2 directories, 3 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	for _, missing := range []string{"node_modules", "app.js", "debug.log"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
+func TestDispatcher_GitIgnoreMissingFile(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:         true,
+			RespectGitIgnore: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	if !strings.Contains(got, "main.go") {
+		t.Fatalf("dispatcher() output = %q, want to contain main.go", got)
+	}
+}
+
+func TestDispatcher_GitIgnoreWithHiddenFiles(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, ".gitignore"), ".env\n")
+	mustWriteFile(t, filepath.Join(dir, ".env"), "secret")
+	mustWriteFile(t, filepath.Join(dir, ".hidden"), "hidden")
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:         true,
+			ShowHidden:       true,
+			RespectGitIgnore: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{".gitignore", ".hidden", "main.go", "0 directories, 3 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	if strings.Contains(got, ".env") {
+		t.Fatalf("dispatcher() output = %q, want not to contain ignored .env", got)
+	}
+}
+
 func TestHumanReadableSize(t *testing.T) {
 	tests := []struct {
 		name string

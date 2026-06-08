@@ -20,6 +20,11 @@ const (
 	dot                      = "."
 )
 
+type directoryOptions struct {
+	module.Options
+	gitIgnore *gitIgnoreMatcher
+}
+
 // Dispatcher func - executes function based on flags
 func Dispatcher(options module.Options) error {
 	return dispatcher(options, os.Stdout)
@@ -33,19 +38,28 @@ func dispatcher(options module.Options, output io.Writer) error {
 		return err
 	}
 
+	traversalOptions := directoryOptions{Options: options}
+	if options.Flags.RespectGitIgnore {
+		gitIgnore, err := newGitIgnoreMatcher(options.Directory)
+		if err != nil {
+			return err
+		}
+		traversalOptions.gitIgnore = gitIgnore
+	}
+
 	var fileCount, dirCount int
 	if _, err := fmt.Fprintln(output, dot); err != nil {
 		return err
 	}
 	if options.Flags.ShowTreeView {
 		var err error
-		fileCount, dirCount, err = treeDirectory(options, output, "", true)
+		fileCount, dirCount, err = treeDirectory(traversalOptions, output, "", true)
 		if err != nil {
 			return err
 		}
 	} else {
 		var err error
-		fileCount, dirCount, err = listDirectory(options, output)
+		fileCount, dirCount, err = listDirectory(traversalOptions, output)
 		if err != nil {
 			return err
 		}
@@ -54,7 +68,7 @@ func dispatcher(options module.Options, output io.Writer) error {
 }
 
 // listDirectory func - lists the content of the directory.
-func listDirectory(options module.Options, output io.Writer) (fileCount, dirCount int, err error) {
+func listDirectory(options directoryOptions, output io.Writer) (fileCount, dirCount int, err error) {
 	// Open and read the directory
 	files, d, err := readDirectory(options.Directory)
 	if err != nil {
@@ -75,7 +89,7 @@ func listDirectory(options module.Options, output io.Writer) (fileCount, dirCoun
 	var maxLen int
 
 	for _, file := range files {
-		if !isHidden(file.Name()) || options.Flags.ShowHidden {
+		if shouldShowFile(file, options) {
 			if file.IsDir() {
 				dirCount++
 			} else {
@@ -103,7 +117,7 @@ func listDirectory(options module.Options, output io.Writer) (fileCount, dirCoun
 }
 
 // treeDirectory func - displays a tree view of the directory.
-func treeDirectory(options module.Options, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
+func treeDirectory(options directoryOptions, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
 	// Open and read the directory
 	files, d, err := readDirectory(options.Directory)
 	if err != nil {
@@ -127,9 +141,9 @@ func treeDirectory(options module.Options, output io.Writer, indent string, isLa
 	return fc, dc, nil
 }
 
-func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
+func getLastVisibleIndex(files []os.FileInfo, options directoryOptions) int {
 	for i := len(files) - 1; i >= 0; i-- {
-		if !isHidden(files[i].Name()) || showHidden {
+		if shouldShowFile(files[i], options) {
 			return i
 		}
 	}
@@ -137,10 +151,10 @@ func getLastVisibleIndex(files []os.FileInfo, showHidden bool) int {
 }
 
 // printFilesAndDirectoriesTreeFormat - prints files and directories in tree format
-func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Options, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
-	lastVisibleIndex := getLastVisibleIndex(files, options.Flags.ShowHidden)
+func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options directoryOptions, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
+	lastVisibleIndex := getLastVisibleIndex(files, options)
 	for i, file := range files {
-		if !shouldShowFile(file, options.Flags.ShowHidden) {
+		if !shouldShowFile(file, options) {
 			continue
 		}
 
@@ -167,8 +181,17 @@ func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options module.Opti
 }
 
 // shouldShowFile determines if a file should be displayed based on visibility settings
-func shouldShowFile(file os.FileInfo, showHidden bool) bool {
-	return !isHidden(file.Name()) || showHidden
+func shouldShowFile(file os.FileInfo, options directoryOptions) bool {
+	if isHidden(file.Name()) && !options.Flags.ShowHidden {
+		return false
+	}
+
+	if options.gitIgnore == nil {
+		return true
+	}
+
+	filePath := filepath.Join(options.Directory, file.Name())
+	return !options.gitIgnore.ignores(filePath, file.IsDir())
 }
 
 // calculateIndent returns the appropriate prefix and child indent strings
@@ -201,7 +224,7 @@ func formatFileWithOptions(prefix string, file os.FileInfo, flags module.Flags) 
 }
 
 // processDirectory recursively processes a subdirectory
-func processDirectory(file os.FileInfo, options module.Options, output io.Writer, childIndent string, isLastFolder bool) (fileCount, dirCount int, err error) {
+func processDirectory(file os.FileInfo, options directoryOptions, output io.Writer, childIndent string, isLastFolder bool) (fileCount, dirCount int, err error) {
 	newOpts := options
 	newOpts.Directory = filepath.Join(options.Directory, file.Name())
 	return treeDirectory(newOpts, output, childIndent, isLastFolder)

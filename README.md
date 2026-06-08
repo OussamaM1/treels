@@ -29,6 +29,7 @@ treels [Flags] [Path]
 - `-h, --help`: Help for treels
 - `-t, --tree`: Tree view of the directory
 - `--no-icons`: Disable icons
+- `--gitignore`: Respect .gitignore rules
 - `-r, --readable`: Show human-readable size for each file and directory
 - `-v, --version`: Show treels version
 

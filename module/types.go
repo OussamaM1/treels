@@ -8,6 +8,7 @@ type Flags struct {
 	HideIcon         bool
 	ShowReadableSize bool
 	ShowVersion      bool
+	RespectGitIgnore bool
 }
 
 // Options struct - Contains configuration options for directory listing.

@@ -79,7 +79,7 @@ func TestRootCmd_VersionFlag(t *testing.T) {
 				t.Fatalf("Execute() error = %v, want nil", err)
 			}
 
-			if got := output.String(); got != "treels v1.3.0\n" {
+			if got := output.String(); got != "treels v1.3.1\n" {
 				t.Fatalf("Execute() output = %q, want version output", got)
 			}
 		})
@@ -123,6 +123,35 @@ func TestRootCmd_ReadableFlag(t *testing.T) {
 
 	if !strings.Contains(output, "main.go (12 B)") {
 		t.Fatalf("Execute() output = %q, want readable file size", output)
+	}
+}
+
+func TestRootCmd_GitIgnoreFlag(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "ignored.txt"), []byte("ignored"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--gitignore", "--no-icons", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	if strings.Contains(output, "ignored.txt") {
+		t.Fatalf("Execute() output = %q, want ignored file to be omitted", output)
+	}
+	if !strings.Contains(output, "main.go") {
+		t.Fatalf("Execute() output = %q, want visible file", output)
 	}
 }
 
