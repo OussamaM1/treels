@@ -10,7 +10,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "v1.3.0"
+const version = "v1.3.1"
 
 // Execute func - runs the root command.
 func Execute() {
