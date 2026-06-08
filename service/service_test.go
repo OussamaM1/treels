@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/oussamaM1/treels/module"
 )
@@ -125,6 +126,92 @@ func TestHumanReadableSize(t *testing.T) {
 	}
 }
 
+func TestResolveFileIconStyle(t *testing.T) {
+	tests := []struct {
+		name      string
+		fileName  string
+		wantIcon  string
+		wantColor string
+	}{
+		{
+			name:      "filename specific icon takes precedence",
+			fileName:  "README.md",
+			wantIcon:  module.ReadmeIcon,
+			wantColor: module.Cyan,
+		},
+		{
+			name:      "known extension is case insensitive",
+			fileName:  "main.GO",
+			wantIcon:  module.GoLangIcon,
+			wantColor: module.LightBlue,
+		},
+		{
+			name:      "multi-part config filename",
+			fileName:  ".eslintrc.json",
+			wantIcon:  module.ESLintIcon,
+			wantColor: module.Purple,
+		},
+		{
+			name:      "unknown extension falls back to file icon",
+			fileName:  "archive.unknown",
+			wantIcon:  module.FileIcon,
+			wantColor: "",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveFileIconStyle(tt.fileName)
+			if got.icon != tt.wantIcon || got.color != tt.wantColor {
+				t.Fatalf("resolveFileIconStyle(%q) = %+v, want icon %q and color %q", tt.fileName, got, tt.wantIcon, tt.wantColor)
+			}
+		})
+	}
+}
+
+func TestResolveFolderIconStyle(t *testing.T) {
+	tests := []struct {
+		name       string
+		folderName string
+		wantIcon   string
+		wantColor  string
+	}{
+		{
+			name:       "git folder",
+			folderName: ".git",
+			wantIcon:   module.GitIcon,
+			wantColor:  module.Orange,
+		},
+		{
+			name:       "default folder",
+			folderName: "pkg",
+			wantIcon:   module.FolderIcon,
+			wantColor:  module.Pink,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := resolveFolderIconStyle(tt.folderName)
+			if got.icon != tt.wantIcon || got.color != tt.wantColor {
+				t.Fatalf("resolveFolderIconStyle(%q) = %+v, want icon %q and color %q", tt.folderName, got, tt.wantIcon, tt.wantColor)
+			}
+		})
+	}
+}
+
+func TestFormatFileWithOptions_HideIcon(t *testing.T) {
+	file := fakeFileInfo{name: "main.go"}
+
+	got := formatFileWithOptions("", file, module.Flags{HideIcon: true})
+	if strings.Contains(got, module.GoLangIcon) {
+		t.Fatalf("formatFileWithOptions() = %q, want no file icon", got)
+	}
+	if got != "main.go" {
+		t.Fatalf("formatFileWithOptions() = %q, want plain file name", got)
+	}
+}
+
 func TestReadDirectory_FilePath(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "regular.txt")
 	mustWriteFile(t, path, "content")
@@ -173,4 +260,37 @@ func mustMkdir(t *testing.T, path string) {
 	if err := os.Mkdir(path, 0o755); err != nil {
 		t.Fatalf("Mkdir(%q) error = %v", path, err)
 	}
+}
+
+type fakeFileInfo struct {
+	name  string
+	size  int64
+	isDir bool
+}
+
+func (f fakeFileInfo) Name() string {
+	return f.name
+}
+
+func (f fakeFileInfo) Size() int64 {
+	return f.size
+}
+
+func (f fakeFileInfo) Mode() os.FileMode {
+	if f.isDir {
+		return os.ModeDir
+	}
+	return 0
+}
+
+func (f fakeFileInfo) ModTime() time.Time {
+	return time.Time{}
+}
+
+func (f fakeFileInfo) IsDir() bool {
+	return f.isDir
+}
+
+func (f fakeFileInfo) Sys() interface{} {
+	return nil
 }
