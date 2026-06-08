@@ -30,6 +30,7 @@ treels [Flags] [Path]
 - `-t, --tree`: Tree view of the directory
 - `--no-icons`: Disable icons
 - `--gitignore`: Respect .gitignore rules
+- `--depth N`: Limit tree view recursion depth
 - `-r, --readable`: Show human-readable size for each file and directory
 - `-v, --version`: Show treels version
 

@@ -32,6 +32,10 @@ func newRootCmd() *cobra.Command {
 				_, err := fmt.Fprintf(cmd.OutOrStdout(), "treels %s\n", version)
 				return err
 			}
+			if cmd.Flags().Changed("depth") && flag.TreeDepth < 0 {
+				return fmt.Errorf("--depth must be greater than or equal to 0")
+			}
+			flag.LimitTreeDepth = cmd.Flags().Changed("depth")
 
 			options := module.Options{Flags: flag}
 			if len(args) == 1 {

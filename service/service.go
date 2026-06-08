@@ -53,7 +53,7 @@ func dispatcher(options module.Options, output io.Writer) error {
 	}
 	if options.Flags.ShowTreeView {
 		var err error
-		fileCount, dirCount, err = treeDirectory(traversalOptions, output, "", true)
+		fileCount, dirCount, err = treeDirectory(traversalOptions, output, "", true, 0)
 		if err != nil {
 			return err
 		}
@@ -117,7 +117,11 @@ func listDirectory(options directoryOptions, output io.Writer) (fileCount, dirCo
 }
 
 // treeDirectory func - displays a tree view of the directory.
-func treeDirectory(options directoryOptions, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
+func treeDirectory(options directoryOptions, output io.Writer, indent string, isLastFolder bool, depth int) (fileCount, dirCount int, err error) {
+	if reachedMaxDepth(options.Flags, depth) {
+		return 0, 0, nil
+	}
+
 	// Open and read the directory
 	files, d, err := readDirectory(options.Directory)
 	if err != nil {
@@ -134,11 +138,15 @@ func treeDirectory(options directoryOptions, output io.Writer, indent string, is
 	sortSlice(files)
 
 	// Print files and directories
-	fc, dc, err := printFilesAndDirectoriesTreeFormat(files, options, output, indent, isLastFolder)
+	fc, dc, err := printFilesAndDirectoriesTreeFormat(files, options, output, indent, isLastFolder, depth)
 	if err != nil {
 		return 0, 0, err
 	}
 	return fc, dc, nil
+}
+
+func reachedMaxDepth(flags module.Flags, depth int) bool {
+	return flags.LimitTreeDepth && depth >= flags.TreeDepth
 }
 
 func getLastVisibleIndex(files []os.FileInfo, options directoryOptions) int {
@@ -151,7 +159,7 @@ func getLastVisibleIndex(files []os.FileInfo, options directoryOptions) int {
 }
 
 // printFilesAndDirectoriesTreeFormat - prints files and directories in tree format
-func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options directoryOptions, output io.Writer, indent string, isLastFolder bool) (fileCount, dirCount int, err error) {
+func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options directoryOptions, output io.Writer, indent string, isLastFolder bool, depth int) (fileCount, dirCount int, err error) {
 	lastVisibleIndex := getLastVisibleIndex(files, options)
 	for i, file := range files {
 		if !shouldShowFile(file, options) {
@@ -167,7 +175,7 @@ func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options directoryOp
 
 		if file.IsDir() {
 			dirCount++
-			fc, dc, err := processDirectory(file, options, output, childIndent, isLast && isLastFolder)
+			fc, dc, err := processDirectory(file, options, output, childIndent, isLast && isLastFolder, depth+1)
 			if err != nil {
 				return 0, 0, err
 			}
@@ -224,10 +232,10 @@ func formatFileWithOptions(prefix string, file os.FileInfo, flags module.Flags) 
 }
 
 // processDirectory recursively processes a subdirectory
-func processDirectory(file os.FileInfo, options directoryOptions, output io.Writer, childIndent string, isLastFolder bool) (fileCount, dirCount int, err error) {
+func processDirectory(file os.FileInfo, options directoryOptions, output io.Writer, childIndent string, isLastFolder bool, depth int) (fileCount, dirCount int, err error) {
 	newOpts := options
 	newOpts.Directory = filepath.Join(options.Directory, file.Name())
-	return treeDirectory(newOpts, output, childIndent, isLastFolder)
+	return treeDirectory(newOpts, output, childIndent, isLastFolder, depth)
 }
 
 var errGetwd = errors.New("get current working directory")
