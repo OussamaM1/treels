@@ -9,6 +9,8 @@ type Flags struct {
 	ShowReadableSize bool
 	ShowVersion      bool
 	RespectGitIgnore bool
+	TreeDepth        int
+	LimitTreeDepth   bool
 }
 
 // Options struct - Contains configuration options for directory listing.

@@ -104,6 +104,68 @@ func TestDispatcher_TreeDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_TreeDirectoryDepth(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "subpkg"))
+	mustWriteFile(t, filepath.Join(dir, "subpkg", "nested.go"), "package nested")
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	tests := []struct {
+		name         string
+		depth        int
+		wantContains []string
+		wantMissing  []string
+	}{
+		{
+			name:         "zero shows only root",
+			depth:        0,
+			wantContains: []string{".", "0 directories, 0 files"},
+			wantMissing:  []string{"main.go", "subpkg", "nested.go"},
+		},
+		{
+			name:         "one shows direct children",
+			depth:        1,
+			wantContains: []string{"main.go", "subpkg", "1 directories, 1 files"},
+			wantMissing:  []string{"nested.go"},
+		},
+		{
+			name:         "two shows grandchildren",
+			depth:        2,
+			wantContains: []string{"main.go", "subpkg", "nested.go", "1 directories, 2 files"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := dispatcher(module.Options{
+				Directory: dir,
+				Flags: module.Flags{
+					HideIcon:       true,
+					ShowTreeView:   true,
+					TreeDepth:      tt.depth,
+					LimitTreeDepth: true,
+				},
+			}, &output)
+			if err != nil {
+				t.Fatalf("dispatcher() error = %v, want nil", err)
+			}
+
+			got := stripANSI(output.String())
+			for _, want := range tt.wantContains {
+				if !strings.Contains(got, want) {
+					t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+				}
+			}
+			for _, missing := range tt.wantMissing {
+				if strings.Contains(got, missing) {
+					t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+				}
+			}
+		})
+	}
+}
+
 func TestDispatcher_ListDirectoryGitIgnore(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "*.log\nignored-dir/\n!keep.log\n")

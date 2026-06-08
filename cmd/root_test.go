@@ -126,6 +126,48 @@ func TestRootCmd_ReadableFlag(t *testing.T) {
 	}
 }
 
+func TestRootCmd_DepthFlag(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "subpkg"), 0o755); err != nil {
+		t.Fatalf("Mkdir() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "subpkg", "nested.go"), []byte("package nested"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--tree", "--depth", "1", "--no-icons", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	if !strings.Contains(output, "subpkg") || !strings.Contains(output, "main.go") {
+		t.Fatalf("Execute() output = %q, want direct children", output)
+	}
+	if strings.Contains(output, "nested.go") {
+		t.Fatalf("Execute() output = %q, want nested file omitted", output)
+	}
+}
+
+func TestRootCmd_DepthFlagRejectsNegativeValue(t *testing.T) {
+	cmd := newRootCmd()
+	cmd.SetArgs([]string{"--tree", "--depth", "-1"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute() error = nil, want error")
+	}
+	if !strings.Contains(err.Error(), "--depth must be greater than or equal to 0") {
+		t.Fatalf("Execute() error = %q, want depth validation error", err)
+	}
+}
+
 func TestRootCmd_GitIgnoreFlag(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
