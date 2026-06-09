@@ -454,6 +454,138 @@ func TestDispatcher_GitIgnoreWithHiddenFiles(t *testing.T) {
 	}
 }
 
+func TestGitIgnoreRuleParsingAndMatching(t *testing.T) {
+	tests := []struct {
+		name     string
+		line     string
+		path     string
+		isDir    bool
+		wantRule bool
+		want     bool
+		negated  bool
+	}{
+		{
+			name:     "blank line",
+			line:     "   ",
+			wantRule: false,
+		},
+		{
+			name:     "comment line",
+			line:     "# generated files",
+			wantRule: false,
+		},
+		{
+			name:     "escaped comment",
+			line:     `\#literal`,
+			path:     "#literal",
+			wantRule: true,
+			want:     true,
+		},
+		{
+			name:     "escaped negation",
+			line:     `\!literal`,
+			path:     "!literal",
+			wantRule: true,
+			want:     true,
+		},
+		{
+			name:     "negated rule",
+			line:     "!keep.log",
+			path:     "keep.log",
+			wantRule: true,
+			want:     true,
+			negated:  true,
+		},
+		{
+			name:     "anchored rule",
+			line:     "/dist",
+			path:     "dist",
+			wantRule: true,
+			want:     true,
+		},
+		{
+			name:     "directory only does not match file",
+			line:     "build/",
+			path:     "build",
+			isDir:    false,
+			wantRule: true,
+			want:     false,
+		},
+		{
+			name:     "directory only matches directory",
+			line:     "build/",
+			path:     "build",
+			isDir:    true,
+			wantRule: true,
+			want:     true,
+		},
+		{
+			name:     "double star path",
+			line:     "logs/**/*.tmp",
+			path:     "logs/app/archive/debug.tmp",
+			wantRule: true,
+			want:     true,
+		},
+		{
+			name:     "invalid glob",
+			line:     "[",
+			path:     "[",
+			wantRule: true,
+			want:     false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			rule, ok := parseGitIgnoreRule(tt.line)
+			if ok != tt.wantRule {
+				t.Fatalf("parseGitIgnoreRule(%q) ok = %v, want %v", tt.line, ok, tt.wantRule)
+			}
+			if !ok {
+				return
+			}
+			if rule.negated != tt.negated {
+				t.Fatalf("parseGitIgnoreRule(%q) negated = %v, want %v", tt.line, rule.negated, tt.negated)
+			}
+			if got := rule.matches(tt.path, tt.isDir); got != tt.want {
+				t.Fatalf("rule.matches(%q, %v) = %v, want %v", tt.path, tt.isDir, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGitIgnoreMatcherIgnores(t *testing.T) {
+	root := t.TempDir()
+	matcher := &gitIgnoreMatcher{
+		root: root,
+		rules: []gitIgnoreRule{
+			{pattern: "*.log"},
+			{pattern: "keep.log", negated: true},
+			{pattern: "cache", dirOnly: true},
+		},
+	}
+
+	tests := []struct {
+		name  string
+		path  string
+		isDir bool
+		want  bool
+	}{
+		{name: "ignored file", path: filepath.Join(root, "debug.log"), want: true},
+		{name: "negated file", path: filepath.Join(root, "keep.log"), want: false},
+		{name: "ignored directory", path: filepath.Join(root, "cache"), isDir: true, want: true},
+		{name: "outside root", path: filepath.Join(t.TempDir(), "debug.log"), want: false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := matcher.ignores(tt.path, tt.isDir); got != tt.want {
+				t.Fatalf("matcher.ignores(%q, %v) = %v, want %v", tt.path, tt.isDir, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestHumanReadableSize(t *testing.T) {
 	tests := []struct {
 		name string
@@ -559,6 +691,80 @@ func TestFormatFileWithOptions_HideIcon(t *testing.T) {
 	}
 	if got != "main.go" {
 		t.Fatalf("formatFileWithOptions() = %q, want plain file name", got)
+	}
+}
+
+func TestFormatFileWithOptions_WithIcons(t *testing.T) {
+	tests := []struct {
+		name string
+		file fakeFileInfo
+		want []string
+	}{
+		{
+			name: "known file icon",
+			file: fakeFileInfo{name: "main.go"},
+			want: []string{module.GoLangIcon, "main.go"},
+		},
+		{
+			name: "default file icon",
+			file: fakeFileInfo{name: "unknownfile"},
+			want: []string{module.FileIcon, "unknownfile"},
+		},
+		{
+			name: "known folder icon",
+			file: fakeFileInfo{name: ".git", isDir: true},
+			want: []string{module.GitIcon, ".git"},
+		},
+		{
+			name: "default folder icon",
+			file: fakeFileInfo{name: "src", isDir: true},
+			want: []string{module.FolderIcon, "src"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := formatFileWithOptions("├── ", tt.file, module.Flags{})
+			for _, want := range tt.want {
+				if !strings.Contains(got, want) {
+					t.Fatalf("formatFileWithOptions() = %q, want to contain %q", got, want)
+				}
+			}
+		})
+	}
+}
+
+func TestCheckDefaultDirectory(t *testing.T) {
+	var directory string
+	if err := CheckDefaultDirectory(&directory); err != nil {
+		t.Fatalf("CheckDefaultDirectory() error = %v, want nil", err)
+	}
+	if directory == "" {
+		t.Fatal("CheckDefaultDirectory() directory = empty, want current directory")
+	}
+
+	existing := "/tmp"
+	if err := CheckDefaultDirectory(&existing); err != nil {
+		t.Fatalf("CheckDefaultDirectory() error = %v, want nil", err)
+	}
+	if existing != "/tmp" {
+		t.Fatalf("CheckDefaultDirectory() directory = %q, want /tmp", existing)
+	}
+}
+
+func TestCloseDirectoryNil(t *testing.T) {
+	if err := closeDirectory(nil); err != nil {
+		t.Fatalf("closeDirectory(nil) error = %v, want nil", err)
+	}
+}
+
+func TestPrintGridEmpty(t *testing.T) {
+	var output bytes.Buffer
+	if err := printGrid(&output, nil, 0); err != nil {
+		t.Fatalf("printGrid() error = %v, want nil", err)
+	}
+	if output.Len() != 0 {
+		t.Fatalf("printGrid() output = %q, want empty", output.String())
 	}
 }
 

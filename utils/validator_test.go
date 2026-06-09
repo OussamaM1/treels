@@ -3,6 +3,8 @@ package utils
 import (
 	"os"
 	"path/filepath"
+	"runtime"
+	"strings"
 	"testing"
 )
 
@@ -33,6 +35,31 @@ func TestValidateDirectory(t *testing.T) {
 		err := ValidateDirectory(path)
 		if err == nil {
 			t.Fatal("ValidateDirectory() error = nil, want error")
+		}
+	})
+
+	t.Run("directory is not readable", func(t *testing.T) {
+		if runtime.GOOS == "windows" {
+			t.Skip("permission bits are not reliable for this test on windows")
+		}
+
+		dir := filepath.Join(t.TempDir(), "restricted")
+		if err := os.Mkdir(dir, 0o755); err != nil {
+			t.Fatalf("Mkdir(%q) error = %v", dir, err)
+		}
+		if err := os.Chmod(dir, 0o000); err != nil {
+			t.Fatalf("Chmod(%q) error = %v", dir, err)
+		}
+		t.Cleanup(func() {
+			_ = os.Chmod(dir, 0o755)
+		})
+
+		err := ValidateDirectory(dir)
+		if err == nil {
+			t.Fatal("ValidateDirectory() error = nil, want error")
+		}
+		if !strings.Contains(err.Error(), "open directory") {
+			t.Fatalf("ValidateDirectory() error = %q, want open directory context", err)
 		}
 	})
 }
