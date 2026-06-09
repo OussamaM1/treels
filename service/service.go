@@ -47,6 +47,10 @@ func dispatcher(options module.Options, output io.Writer) error {
 		traversalOptions.gitIgnore = gitIgnore
 	}
 
+	if options.Flags.ShowJSON {
+		return printJSONDirectory(traversalOptions, output)
+	}
+
 	var fileCount, dirCount int
 	if _, err := fmt.Fprintln(output, dot); err != nil {
 		return err

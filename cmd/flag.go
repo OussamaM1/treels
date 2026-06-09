@@ -11,6 +11,7 @@ func FlagDefinition(cmd *cobra.Command, flags *module.Flags) {
 	cmd.PersistentFlags().BoolVarP(&flags.ShowHidden, "all", "a", false, "List all files and directories")
 	cmd.PersistentFlags().BoolVarP(&flags.ShowTreeView, "tree", "t", false, "Tree view of the directory")
 	cmd.PersistentFlags().BoolVar(&flags.ShowDirsOnly, "dirs-only", false, "List directories only")
+	cmd.PersistentFlags().BoolVar(&flags.ShowJSON, "json", false, "Output machine-readable JSON")
 	cmd.PersistentFlags().BoolVar(&flags.HideIcon, "no-icons", false, "Disable icons")
 	cmd.PersistentFlags().BoolVar(&flags.HideSummary, "no-summary", false, "Hide the final file and directory count")
 	cmd.PersistentFlags().BoolVar(&flags.RespectGitIgnore, "gitignore", false, "Respect .gitignore rules")
