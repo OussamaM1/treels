@@ -9,6 +9,7 @@ type Flags struct {
 	ShowReadableSize bool
 	ShowVersion      bool
 	ShowDirsOnly     bool
+	ShowJSON         bool
 	HideSummary      bool
 	RespectGitIgnore bool
 	TreeDepth        int

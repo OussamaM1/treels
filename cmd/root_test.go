@@ -2,6 +2,7 @@ package cmd
 
 import (
 	"bytes"
+	"encoding/json"
 	"io"
 	"os"
 	"path/filepath"
@@ -249,6 +250,45 @@ func TestRootCmd_GitIgnoreFlag(t *testing.T) {
 	}
 	if !strings.Contains(output, "main.go") {
 		t.Fatalf("Execute() output = %q, want visible file", output)
+	}
+}
+
+func TestRootCmd_JSONFlag(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--json", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	var got struct {
+		Tree    bool `json:"tree"`
+		Summary struct {
+			Files int `json:"files"`
+		} `json:"summary"`
+		Entries []struct {
+			Name string `json:"name"`
+			Type string `json:"type"`
+		} `json:"entries"`
+	}
+	if err := json.Unmarshal([]byte(output), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, output = %q", err, output)
+	}
+	if got.Tree {
+		t.Fatal("json tree = true, want false")
+	}
+	if got.Summary.Files != 1 {
+		t.Fatalf("json summary files = %d, want 1", got.Summary.Files)
+	}
+	if len(got.Entries) != 1 || got.Entries[0].Name != "main.go" || got.Entries[0].Type != "file" {
+		t.Fatalf("json entries = %+v, want main.go file", got.Entries)
 	}
 }
 

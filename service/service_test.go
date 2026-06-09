@@ -2,6 +2,7 @@ package service
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"strings"
@@ -891,6 +892,192 @@ func TestReadDirectory_FilePath(t *testing.T) {
 	}
 	if dir != nil {
 		t.Fatalf("readDirectory() directory = %v, want nil after read failure", dir)
+	}
+}
+
+func TestDispatcher_JSONFlatDirectory(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+	mustMkdir(t, filepath.Join(dir, "service"))
+	mustWriteFile(t, filepath.Join(dir, ".hidden"), "hidden")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags:     module.Flags{ShowJSON: true},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	var got jsonOutput
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, output = %q", err, output.String())
+	}
+
+	if got.Root != dir {
+		t.Fatalf("json root = %q, want %q", got.Root, dir)
+	}
+	if got.Tree {
+		t.Fatal("json tree = true, want false")
+	}
+	if got.Summary.Directories != 1 || got.Summary.Files != 1 {
+		t.Fatalf("json summary = %+v, want 1 directory and 1 file", got.Summary)
+	}
+	if len(got.Entries) != 2 {
+		t.Fatalf("json entries length = %d, want 2", len(got.Entries))
+	}
+	if got.Entries[0].Name != "main.go" || got.Entries[0].Type != "file" || got.Entries[0].Size != 12 {
+		t.Fatalf("first json entry = %+v, want main.go file", got.Entries[0])
+	}
+	if got.Entries[1].Name != "service" || got.Entries[1].Type != "directory" {
+		t.Fatalf("second json entry = %+v, want service directory", got.Entries[1])
+	}
+	if strings.Contains(output.String(), "directories,") || strings.Contains(output.String(), "├──") {
+		t.Fatalf("json output = %q, want no human formatted output", output.String())
+	}
+}
+
+func TestDispatcher_JSONTreeDirectoryWithDepth(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "cmd"))
+	mustMkdir(t, filepath.Join(dir, "cmd", "internal"))
+	mustWriteFile(t, filepath.Join(dir, "cmd", "root.go"), "package cmd")
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			ShowJSON:       true,
+			ShowTreeView:   true,
+			TreeDepth:      1,
+			LimitTreeDepth: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	var got jsonOutput
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+
+	if !got.Tree {
+		t.Fatal("json tree = false, want true")
+	}
+	if got.Summary.Directories != 1 || got.Summary.Files != 1 {
+		t.Fatalf("json summary = %+v, want depth-limited 1 directory and 1 file", got.Summary)
+	}
+	if len(got.Entries) != 2 {
+		t.Fatalf("json entries length = %d, want 2", len(got.Entries))
+	}
+	cmdEntry := got.Entries[1]
+	if cmdEntry.Name != "cmd" {
+		t.Fatalf("second json entry = %+v, want cmd directory", cmdEntry)
+	}
+	if len(cmdEntry.Children) != 0 {
+		t.Fatalf("cmd children = %+v, want none at depth 1", cmdEntry.Children)
+	}
+}
+
+func TestDispatcher_JSONWithGitIgnoreAndDirsOnly(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "ignored/\n")
+	mustMkdir(t, filepath.Join(dir, "ignored"))
+	mustMkdir(t, filepath.Join(dir, "visible"))
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			ShowJSON:         true,
+			ShowTreeView:     true,
+			ShowDirsOnly:     true,
+			RespectGitIgnore: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	var got jsonOutput
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v", err)
+	}
+
+	if got.Summary.Directories != 1 || got.Summary.Files != 0 {
+		t.Fatalf("json summary = %+v, want 1 directory and 0 files", got.Summary)
+	}
+	if len(got.Entries) != 1 || got.Entries[0].Name != "visible" {
+		t.Fatalf("json entries = %+v, want only visible directory", got.Entries)
+	}
+}
+
+func TestPrintJSONDirectoryErrors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "regular.txt")
+	mustWriteFile(t, path, "content")
+
+	var output bytes.Buffer
+	err := printJSONDirectory(directoryOptions{Options: module.Options{Directory: path}}, &output)
+	if err == nil {
+		t.Fatal("printJSONDirectory() error = nil, want read error")
+	}
+
+	_, _, err = collectJSONFlatEntries(directoryOptions{Options: module.Options{Directory: path}})
+	if err == nil {
+		t.Fatal("collectJSONFlatEntries() error = nil, want read error")
+	}
+
+	_, _, err = collectJSONTreeEntries(directoryOptions{Options: module.Options{Directory: path}}, 0)
+	if err == nil {
+		t.Fatal("collectJSONTreeEntries() error = nil, want read error")
+	}
+
+	entries, summary, err := collectJSONTreeEntries(directoryOptions{
+		Options: module.Options{
+			Directory: path,
+			Flags: module.Flags{
+				TreeDepth:      0,
+				LimitTreeDepth: true,
+			},
+		},
+	}, 0)
+	if err != nil {
+		t.Fatalf("collectJSONTreeEntries() error = %v, want nil at max depth", err)
+	}
+	if len(entries) != 0 || summary.Directories != 0 || summary.Files != 0 {
+		t.Fatalf("collectJSONTreeEntries() = entries %+v summary %+v, want empty", entries, summary)
+	}
+
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+	err = printJSONDirectory(directoryOptions{Options: module.Options{Directory: dir}}, &failingWriter{})
+	if err == nil {
+		t.Fatal("printJSONDirectory() error = nil, want write error")
+	}
+}
+
+func TestJSONEntryAndSummaryHelpers(t *testing.T) {
+	file := fakeFileInfo{name: "main.go", size: 12}
+	fileEntry := newJSONEntry("/tmp/project", file)
+	if fileEntry.Name != "main.go" || fileEntry.Type != "file" || fileEntry.Size != 12 {
+		t.Fatalf("newJSONEntry() = %+v, want file entry", fileEntry)
+	}
+
+	dir := fakeFileInfo{name: "cmd", isDir: true}
+	dirEntry := newJSONEntry("/tmp/project", dir)
+	if dirEntry.Name != "cmd" || dirEntry.Type != "directory" {
+		t.Fatalf("newJSONEntry() = %+v, want directory entry", dirEntry)
+	}
+
+	var summary jsonSummary
+	addJSONSummaryCount(&summary, file)
+	addJSONSummaryCount(&summary, dir)
+	if summary.Files != 1 || summary.Directories != 1 {
+		t.Fatalf("summary = %+v, want 1 file and 1 directory", summary)
 	}
 }
 
