@@ -23,6 +23,15 @@ func TestDispatcher_MissingDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_PublicWrapper(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	if err := Dispatcher(module.Options{Directory: dir, Flags: module.Flags{HideIcon: true, HideSummary: true}}); err != nil {
+		t.Fatalf("Dispatcher() error = %v, want nil", err)
+	}
+}
+
 func TestDispatcher_ListDirectory(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, "alpha.go"), "package main")
@@ -74,6 +83,21 @@ func TestDispatcher_ListDirectory(t *testing.T) {
 				}
 			}
 		})
+	}
+}
+
+func TestListAndTreeDirectory_ReadErrors(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "regular.txt")
+	mustWriteFile(t, path, "content")
+
+	var output bytes.Buffer
+	options := directoryOptions{Options: module.Options{Directory: path}}
+
+	if _, _, err := listDirectory(options, &output); err == nil {
+		t.Fatal("listDirectory() error = nil, want error")
+	}
+	if _, _, err := treeDirectory(options, &output, "", true, 0); err == nil {
+		t.Fatal("treeDirectory() error = nil, want error")
 	}
 }
 
@@ -634,6 +658,12 @@ func TestResolveFileIconStyle(t *testing.T) {
 			wantColor: module.Purple,
 		},
 		{
+			name:      "exact filename is case insensitive",
+			fileName:  "PACKAGE.JSON",
+			wantIcon:  module.NPMIcon,
+			wantColor: module.Red,
+		},
+		{
 			name:      "unknown extension falls back to file icon",
 			fileName:  "archive.unknown",
 			wantIcon:  module.FileIcon,
@@ -661,6 +691,12 @@ func TestResolveFolderIconStyle(t *testing.T) {
 		{
 			name:       "git folder",
 			folderName: ".git",
+			wantIcon:   module.GitIcon,
+			wantColor:  module.Orange,
+		},
+		{
+			name:       "folder match is case insensitive",
+			folderName: ".GIT",
 			wantIcon:   module.GitIcon,
 			wantColor:  module.Orange,
 		},
@@ -768,6 +804,80 @@ func TestPrintGridEmpty(t *testing.T) {
 	}
 }
 
+func TestPrintGridWriteErrors(t *testing.T) {
+	tests := []struct {
+		name      string
+		failAfter int
+		entries   []string
+		maxLen    int
+	}{
+		{
+			name:      "entry write",
+			failAfter: 0,
+			entries:   []string{"alpha"},
+			maxLen:    5,
+		},
+		{
+			name:      "padding write",
+			failAfter: 1,
+			entries:   []string{"alpha", "beta"},
+			maxLen:    5,
+		},
+		{
+			name:      "newline write",
+			failAfter: 1,
+			entries:   []string{"alpha"},
+			maxLen:    200,
+		},
+		{
+			name:      "final newline write",
+			failAfter: 4,
+			entries:   []string{"alpha", "beta"},
+			maxLen:    5,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			writer := &failingWriter{failAfter: tt.failAfter}
+			if err := printGrid(writer, tt.entries, tt.maxLen); err == nil {
+				t.Fatal("printGrid() error = nil, want error")
+			}
+		})
+	}
+}
+
+func TestMatchPatternSegmentsFailures(t *testing.T) {
+	tests := []struct {
+		name            string
+		patternSegments []string
+		nameSegments    []string
+	}{
+		{
+			name:            "name exhausted before pattern",
+			patternSegments: []string{"src"},
+		},
+		{
+			name:            "invalid segment glob",
+			patternSegments: []string{"["},
+			nameSegments:    []string{"["},
+		},
+		{
+			name:            "segment mismatch",
+			patternSegments: []string{"src"},
+			nameSegments:    []string{"cmd"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if matchPatternSegments(tt.patternSegments, tt.nameSegments) {
+				t.Fatalf("matchPatternSegments(%v, %v) = true, want false", tt.patternSegments, tt.nameSegments)
+			}
+		})
+	}
+}
+
 func TestReadDirectory_FilePath(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "regular.txt")
 	mustWriteFile(t, path, "content")
@@ -849,4 +959,17 @@ func (f fakeFileInfo) IsDir() bool {
 
 func (f fakeFileInfo) Sys() interface{} {
 	return nil
+}
+
+type failingWriter struct {
+	writes    int
+	failAfter int
+}
+
+func (w *failingWriter) Write(p []byte) (int, error) {
+	if w.writes >= w.failAfter {
+		return 0, os.ErrPermission
+	}
+	w.writes++
+	return len(p), nil
 }
