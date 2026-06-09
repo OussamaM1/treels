@@ -8,6 +8,7 @@ type Flags struct {
 	HideIcon         bool
 	ShowReadableSize bool
 	ShowVersion      bool
+	HideSummary      bool
 	RespectGitIgnore bool
 	TreeDepth        int
 	LimitTreeDepth   bool

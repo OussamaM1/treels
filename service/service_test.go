@@ -166,6 +166,46 @@ func TestDispatcher_TreeDirectoryDepth(t *testing.T) {
 	}
 }
 
+func TestDispatcher_NoSummary(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "subpkg"))
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	tests := []struct {
+		name  string
+		flags module.Flags
+	}{
+		{
+			name:  "flat mode",
+			flags: module.Flags{HideIcon: true, HideSummary: true},
+		},
+		{
+			name:  "tree mode",
+			flags: module.Flags{HideIcon: true, HideSummary: true, ShowTreeView: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := dispatcher(module.Options{Directory: dir, Flags: tt.flags}, &output)
+			if err != nil {
+				t.Fatalf("dispatcher() error = %v, want nil", err)
+			}
+
+			got := stripANSI(output.String())
+			for _, want := range []string{".", "main.go", "subpkg"} {
+				if !strings.Contains(got, want) {
+					t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+				}
+			}
+			if strings.Contains(got, "directories,") {
+				t.Fatalf("dispatcher() output = %q, want no summary", got)
+			}
+		})
+	}
+}
+
 func TestDispatcher_ListDirectoryGitIgnore(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "*.log\nignored-dir/\n!keep.log\n")
