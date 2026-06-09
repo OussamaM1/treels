@@ -1,8 +1,12 @@
 # treels
 
-`treels` is a small Go CLI that blends the quick scan of `ls` with the structure of `tree`.
+`treels` is a Go CLI that blends the quick scan of `ls` with the structure of `tree`.
 Use it to inspect a directory as a compact grid, expand it as a tree, hide project noise with
 `.gitignore`, and keep large repositories readable with depth limits.
+
+<p align="center">
+  <img src="treels.png" alt="treels picture" width="480">
+</p>
 
 ```bash
 treels                 # compact ls-style view
