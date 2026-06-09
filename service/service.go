@@ -68,7 +68,7 @@ func dispatcher(options module.Options, output io.Writer) error {
 		return nil
 	}
 
-	return printNumberOfFilesAndDirectories(output, fileCount, dirCount)
+	return printNumberOfFilesAndDirectories(output, fileCount, dirCount, options.Flags)
 }
 
 // listDirectory func - lists the content of the directory.
@@ -198,6 +198,10 @@ func shouldShowFile(file os.FileInfo, options directoryOptions) bool {
 		return false
 	}
 
+	if options.Flags.ShowDirsOnly && !file.IsDir() {
+		return false
+	}
+
 	if options.gitIgnore == nil {
 		return true
 	}
@@ -245,7 +249,12 @@ func processDirectory(file os.FileInfo, options directoryOptions, output io.Writ
 var errGetwd = errors.New("get current working directory")
 
 // printNumberOfFilesAndDirectories returns number of files and directories
-func printNumberOfFilesAndDirectories(output io.Writer, fileCount, dirCount int) error {
+func printNumberOfFilesAndDirectories(output io.Writer, fileCount, dirCount int, flags module.Flags) error {
+	if flags.ShowDirsOnly {
+		_, err := fmt.Fprintf(output, "\n%d directories\n", dirCount)
+		return err
+	}
+
 	_, err := fmt.Fprintf(output, "\n%d directories, %d files\n", dirCount, fileCount)
 	return err
 }

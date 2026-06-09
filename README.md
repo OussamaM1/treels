@@ -13,6 +13,7 @@ treels                 # compact ls-style view
 treels -t              # tree view
 treels -t --depth 2    # tree view, limited to two levels
 treels -t --gitignore  # tree view, excluding .gitignore matches
+treels -t --dirs-only  # show directory structure only
 treels --no-summary    # hide the final count line
 ```
 
@@ -83,6 +84,7 @@ $ treels -t --depth 2 --no-icons service
 - Optional Nerd Font icons and file-type colors.
 - `--gitignore` support to skip generated files, dependencies, logs, and build output.
 - `--depth N` to keep tree output readable in large repositories.
+- `--dirs-only` to inspect folder structure without file-level noise.
 - `--readable` file sizes.
 - `--all` support for hidden files.
 - `--no-icons` fallback for terminals without icon fonts.
@@ -147,6 +149,12 @@ Respect `.gitignore` rules:
 treels --tree --gitignore
 ```
 
+Show directories only:
+
+```bash
+treels --tree --dirs-only
+```
+
 Show readable sizes:
 
 ```bash
@@ -171,6 +179,7 @@ treels --no-summary
 | --- | --- |
 | `-a`, `--all` | List hidden files and directories. |
 | `-t`, `--tree` | Show recursive tree view. |
+| `--dirs-only` | Show only directories. |
 | `--depth N` | Limit tree recursion depth. |
 | `--gitignore` | Respect `.gitignore` rules from the target directory. |
 | `--no-icons` | Disable file and folder icons. |

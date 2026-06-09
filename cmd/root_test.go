@@ -191,6 +191,38 @@ func TestRootCmd_NoSummaryFlag(t *testing.T) {
 	}
 }
 
+func TestRootCmd_DirsOnlyFlag(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.Mkdir(filepath.Join(dir, "cmd"), 0o755); err != nil {
+		t.Fatalf("Mkdir() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--dirs-only", "--no-icons", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	if !strings.Contains(output, "cmd") {
+		t.Fatalf("Execute() output = %q, want directory", output)
+	}
+	if strings.Contains(output, "main.go") {
+		t.Fatalf("Execute() output = %q, want file omitted", output)
+	}
+	if !strings.Contains(output, "1 directories") {
+		t.Fatalf("Execute() output = %q, want directory-only summary", output)
+	}
+	if strings.Contains(output, "0 files") {
+		t.Fatalf("Execute() output = %q, want no file count in dirs-only summary", output)
+	}
+}
+
 func TestRootCmd_GitIgnoreFlag(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
