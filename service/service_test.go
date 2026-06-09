@@ -206,6 +206,128 @@ func TestDispatcher_NoSummary(t *testing.T) {
 	}
 }
 
+func TestDispatcher_DirsOnly(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "cmd"))
+	mustMkdir(t, filepath.Join(dir, "service"))
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	tests := []struct {
+		name  string
+		flags module.Flags
+	}{
+		{
+			name:  "flat mode",
+			flags: module.Flags{HideIcon: true, ShowDirsOnly: true},
+		},
+		{
+			name:  "tree mode",
+			flags: module.Flags{HideIcon: true, ShowDirsOnly: true, ShowTreeView: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := dispatcher(module.Options{Directory: dir, Flags: tt.flags}, &output)
+			if err != nil {
+				t.Fatalf("dispatcher() error = %v, want nil", err)
+			}
+
+			got := stripANSI(output.String())
+			for _, want := range []string{"cmd", "service", "2 directories"} {
+				if !strings.Contains(got, want) {
+					t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+				}
+			}
+			if strings.Contains(got, "0 files") {
+				t.Fatalf("dispatcher() output = %q, want no file count in dirs-only summary", got)
+			}
+			for _, missing := range []string{"README.md", "main.go"} {
+				if strings.Contains(got, missing) {
+					t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+				}
+			}
+		})
+	}
+}
+
+func TestDispatcher_DirsOnlyWithDepth(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "cmd"))
+	mustMkdir(t, filepath.Join(dir, "cmd", "internal"))
+	mustWriteFile(t, filepath.Join(dir, "cmd", "main.go"), "package main")
+	mustMkdir(t, filepath.Join(dir, "service"))
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:       true,
+			ShowTreeView:   true,
+			ShowDirsOnly:   true,
+			TreeDepth:      1,
+			LimitTreeDepth: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"cmd", "service", "2 directories"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	if strings.Contains(got, "0 files") {
+		t.Fatalf("dispatcher() output = %q, want no file count in dirs-only summary", got)
+	}
+	for _, missing := range []string{"internal", "main.go"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
+func TestDispatcher_DirsOnlyWithGitIgnore(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "ignored-dir/\n")
+	mustMkdir(t, filepath.Join(dir, "ignored-dir"))
+	mustMkdir(t, filepath.Join(dir, "visible-dir"))
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:         true,
+			ShowTreeView:     true,
+			ShowDirsOnly:     true,
+			RespectGitIgnore: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"visible-dir", "1 directories"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	if strings.Contains(got, "0 files") {
+		t.Fatalf("dispatcher() output = %q, want no file count in dirs-only summary", got)
+	}
+	for _, missing := range []string{"ignored-dir", "main.go"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
 func TestDispatcher_ListDirectoryGitIgnore(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "*.log\nignored-dir/\n!keep.log\n")
