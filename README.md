@@ -13,6 +13,7 @@ treels                 # compact ls-style view
 treels -t              # tree view
 treels -t --depth 2    # tree view, limited to two levels
 treels -t --gitignore  # tree view, excluding .gitignore matches
+treels --no-summary    # hide the final count line
 ```
 
 > [!NOTE]
@@ -158,6 +159,12 @@ Disable icons:
 treels --no-icons
 ```
 
+Hide the final summary:
+
+```bash
+treels --no-summary
+```
+
 ## Flags
 
 | Flag | Description |
@@ -167,6 +174,7 @@ treels --no-icons
 | `--depth N` | Limit tree recursion depth. |
 | `--gitignore` | Respect `.gitignore` rules from the target directory. |
 | `--no-icons` | Disable file and folder icons. |
+| `--no-summary` | Hide the final file and directory count. |
 | `-r`, `--readable` | Show human-readable file and directory sizes. |
 | `-v`, `--version` | Print the current version. |
 | `-h`, `--help` | Show help. |

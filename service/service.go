@@ -64,6 +64,10 @@ func dispatcher(options module.Options, output io.Writer) error {
 			return err
 		}
 	}
+	if options.Flags.HideSummary {
+		return nil
+	}
+
 	return printNumberOfFilesAndDirectories(output, fileCount, dirCount)
 }
 

@@ -168,6 +168,29 @@ func TestRootCmd_DepthFlagRejectsNegativeValue(t *testing.T) {
 	}
 }
 
+func TestRootCmd_NoSummaryFlag(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--no-summary", "--no-icons", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	if !strings.Contains(output, "main.go") {
+		t.Fatalf("Execute() output = %q, want visible file", output)
+	}
+	if strings.Contains(output, "directories,") {
+		t.Fatalf("Execute() output = %q, want no summary", output)
+	}
+}
+
 func TestRootCmd_GitIgnoreFlag(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, ".gitignore"), []byte("ignored.txt\n"), 0o644); err != nil {
