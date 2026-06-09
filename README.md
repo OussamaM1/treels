@@ -5,7 +5,7 @@ Use it to inspect a directory as a compact grid, expand it as a tree, hide proje
 `.gitignore`, and keep large repositories readable with depth limits.
 
 <p align="center">
-  <img src="treels.png" alt="treels picture" width="480">
+  <img src="treels.png" alt="treels picture" width="300">
 </p>
 
 ```bash
