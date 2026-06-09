@@ -1,5 +1,8 @@
 # treels
 
+[![Go](https://github.com/OussamaM1/treels/actions/workflows/go.yml/badge.svg)](https://github.com/OussamaM1/treels/actions/workflows/go.yml)
+[![codecov](https://codecov.io/gh/OussamaM1/treels/branch/main/graph/badge.svg)](https://codecov.io/gh/OussamaM1/treels)
+
 `treels` is a Go CLI that blends the quick scan of `ls` with the structure of `tree`.
 Use it to inspect a directory as a compact grid, expand it as a tree, hide project noise with
 `.gitignore`, and keep large repositories readable with depth limits.
