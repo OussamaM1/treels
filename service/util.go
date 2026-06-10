@@ -17,6 +17,12 @@ import (
 const (
 	IconFileFormat   = "%s%s%s %s%s"
 	IconFolderFormat = "%s%s%s%s %s%s"
+	longDateFormat   = "2006-01-02"
+)
+
+var (
+	getWorkingDirectory = os.Getwd
+	terminalSize        = term.GetSize
 )
 
 type iconStyle struct {
@@ -629,7 +635,7 @@ func CheckDefaultDirectory(directory *string) error {
 	if *directory == "" {
 		// Get the current working directory - default value
 		var err error
-		*directory, err = os.Getwd()
+		*directory, err = getWorkingDirectory()
 		if err != nil {
 			return fmt.Errorf("%w: %w", errGetwd, err)
 		}
@@ -776,7 +782,7 @@ func sortSlice(files []os.FileInfo) {
 
 // getTerminalWidth returns the width of the terminal
 func getTerminalWidth() int {
-	width, _, err := term.GetSize(int(os.Stdout.Fd()))
+	width, _, err := terminalSize(int(os.Stdout.Fd()))
 	if err != nil || width == 0 {
 		return 80 // default
 	}

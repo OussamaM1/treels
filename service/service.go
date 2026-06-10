@@ -116,6 +116,15 @@ func listDirectory(options directoryOptions, output io.Writer) (fileCount, dirCo
 		}
 	}
 
+	if options.Flags.ShowLongFormat {
+		for _, entry := range entries {
+			if _, err := fmt.Fprintln(output, entry); err != nil {
+				return 0, 0, err
+			}
+		}
+		return fileCount, dirCount, nil
+	}
+
 	// Print in grid format
 	if err := printGrid(output, entries, maxLen); err != nil {
 		return 0, 0, err
@@ -229,18 +238,40 @@ func printFileWithPrefix(output io.Writer, prefix string, file os.FileInfo, flag
 }
 
 func formatFileWithOptions(prefix string, file os.FileInfo, flags module.Flags) string {
-	var formatted string
-	if flags.HideIcon {
-		formatted = printFilesAndFolderWithoutIcons(prefix, file)
-	} else {
-		formatted = printWithIconAndPrefix(prefix, file)
+	if flags.ShowLongFormat {
+		return formatLongFileWithOptions(prefix, file, flags)
 	}
 
+	formatted := formatFileNameWithOptions(prefix, file, flags)
 	if flags.ShowReadableSize {
 		formatted = appendReadableSize(formatted, file.Size())
 	}
 
 	return formatted
+}
+
+func formatFileNameWithOptions(prefix string, file os.FileInfo, flags module.Flags) string {
+	if flags.HideIcon {
+		return printFilesAndFolderWithoutIcons(prefix, file)
+	}
+
+	return printWithIconAndPrefix(prefix, file)
+}
+
+func formatLongFileWithOptions(prefix string, file os.FileInfo, flags module.Flags) string {
+	name := formatFileNameWithOptions("", file, flags)
+	return fmt.Sprintf("%s%s  %10s  %s  %s", prefix, file.Mode().String(), formatLongSize(file.Size(), flags.ShowReadableSize), file.ModTime().Format(longDateFormat), name)
+}
+
+func formatLongSize(size int64, readable bool) string {
+	if readable {
+		return humanReadableSize(size)
+	}
+	if size < 0 {
+		size = 0
+	}
+
+	return fmt.Sprintf("%d", size)
 }
 
 // processDirectory recursively processes a subdirectory
