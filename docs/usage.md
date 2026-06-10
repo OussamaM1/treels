@@ -149,6 +149,18 @@ treels --exclude "vendor/**"
 treels --tree --include "*.go" --exclude "vendor/**"
 ```
 
+### Sort by largest files first
+
+```bash
+treels --sort size --reverse --long --readable
+```
+
+### Show directories before files
+
+```bash
+treels --dirs-first
+```
+
 ### Disable icons for plain terminals or logs
 
 ```bash
@@ -174,6 +186,9 @@ treels --json
 | `--exclude PATTERN` | Hide entries matching a glob pattern. Can be used multiple times. |
 | `--json` | Output machine-readable JSON. |
 | `-l`, `--long` | Show detailed file metadata. |
+| `--sort name|size|modified|type` | Sort entries by name, size, modification time, or file type. Defaults to `name`. |
+| `--reverse` | Reverse the selected sort order. |
+| `--dirs-first` | Group directories before files. |
 | `--no-icons` | Disable file and folder icons. |
 | `--no-summary` | Hide the final text summary. |
 | `-r`, `--readable` | Show human-readable file and directory sizes. |
@@ -191,6 +206,9 @@ treels --json
 | `--include "*.go" --include "*.md"` | Shows entries matching either include pattern. |
 | `--include "*.go" --exclude "vendor/**"` | Shows Go files except entries under `vendor`. |
 | `--tree --include "*.go"` | Keeps parent directories visible when they contain included files. |
+| `--sort size --reverse` | Shows largest entries first. |
+| `--sort modified --reverse` | Shows newest entries first. |
+| `--dirs-first --reverse` | Keeps directories grouped first, then reverses the selected sort within each group. |
 | `--json --tree` | Emits recursive JSON with `children` arrays for directories. |
 | `--json --long` | JSON output is unchanged; `--long` only affects text output. |
 | `--gitignore --all` | Hidden files are included only if they are not ignored by `.gitignore`. |

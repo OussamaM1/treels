@@ -73,7 +73,7 @@ func collectJSONFlatEntries(options directoryOptions) (entries []jsonEntry, summ
 		}
 	}()
 
-	sortSlice(files)
+	sortSlice(files, options.Flags)
 	for _, file := range files {
 		if !shouldShowFile(file, options) {
 			continue
@@ -103,7 +103,7 @@ func collectJSONTreeEntries(options directoryOptions, depth int) (entries []json
 		}
 	}()
 
-	sortSlice(files)
+	sortSlice(files, options.Flags)
 	visibleFiles, err := visibleTreeFiles(files, options, depth)
 	if err != nil {
 		return nil, jsonSummary{}, err

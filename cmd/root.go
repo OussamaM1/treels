@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strings"
 
 	"github.com/oussamaM1/treels/module"
 	"github.com/oussamaM1/treels/service"
@@ -12,6 +13,13 @@ import (
 )
 
 const version = "v1.3.1"
+
+var validSortFields = map[string]struct{}{
+	"name":     {},
+	"size":     {},
+	"modified": {},
+	"type":     {},
+}
 
 // Execute func - runs the root command.
 func Execute() {
@@ -39,6 +47,10 @@ func newRootCmd() *cobra.Command {
 			}
 			if cmd.Flags().Changed("depth") && flag.TreeDepth < 0 {
 				return fmt.Errorf("--depth must be greater than or equal to 0")
+			}
+			flag.SortBy = strings.ToLower(flag.SortBy)
+			if _, ok := validSortFields[flag.SortBy]; !ok {
+				return fmt.Errorf("--sort must be one of: name, size, modified, type")
 			}
 			flag.LimitTreeDepth = cmd.Flags().Changed("depth")
 

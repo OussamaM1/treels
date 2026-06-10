@@ -15,6 +15,9 @@ type Flags struct {
 	RespectGitIgnore bool
 	IncludePatterns  []string
 	ExcludePatterns  []string
+	SortBy           string
+	ReverseSort      bool
+	DirsFirst        bool
 	TreeDepth        int
 	LimitTreeDepth   bool
 }

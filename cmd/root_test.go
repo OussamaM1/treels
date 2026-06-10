@@ -230,6 +230,62 @@ func TestRootCmd_IncludeExcludeFlags(t *testing.T) {
 	}
 }
 
+func TestRootCmd_SortFlags(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "small.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "large.txt"), []byte("1234567890"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.Mkdir(filepath.Join(dir, "folder"), 0o755); err != nil {
+		t.Fatalf("Mkdir() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--long", "--no-icons", "--sort", "size", "--reverse", "--dirs-first", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	assertOutputOrder(t, output, []string{"folder", "large.txt", "small.txt"})
+}
+
+func TestRootCmd_SortFlagRejectsInvalidValue(t *testing.T) {
+	cmd := newRootCmd()
+	cmd.SetArgs([]string{"--sort", "unknown"})
+
+	err := cmd.Execute()
+	if err == nil {
+		t.Fatal("Execute() error = nil, want invalid sort error")
+	}
+	if !strings.Contains(err.Error(), "--sort must be one of: name, size, modified, type") {
+		t.Fatalf("Execute() error = %q, want invalid sort validation error", err)
+	}
+}
+
+func TestRootCmd_SortFlagIsCaseInsensitive(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "a.txt"), []byte("x"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--sort", "SIZE", "--no-icons", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+	if !strings.Contains(output, "a.txt") {
+		t.Fatalf("Execute() output = %q, want sorted output", output)
+	}
+}
+
 func TestRootCmd_DepthFlag(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.Mkdir(filepath.Join(dir, "subpkg"), 0o755); err != nil {
@@ -424,4 +480,19 @@ func captureStdout(t *testing.T, run func()) string {
 	}
 
 	return string(output)
+}
+
+func assertOutputOrder(t *testing.T, output string, orderedNames []string) {
+	t.Helper()
+	previousIndex := -1
+	for _, name := range orderedNames {
+		index := strings.Index(output, name)
+		if index == -1 {
+			t.Fatalf("output = %q, want to contain %q", output, name)
+		}
+		if index <= previousIndex {
+			t.Fatalf("output = %q, want %q after previous entries %v", output, name, orderedNames)
+		}
+		previousIndex = index
+	}
 }

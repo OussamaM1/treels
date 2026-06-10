@@ -33,6 +33,8 @@ treels --tree --dirs-only      # show directory structure only
 treels --long --readable       # detailed listing with readable sizes
 treels --include "*.go"         # show only matching files
 treels --exclude "*.log"        # hide matching files
+treels --sort size --reverse   # sort entries by largest first
+treels --dirs-first            # group directories before files
 treels --json                  # machine-readable output
 treels --no-icons              # fallback for terminals without Nerd Fonts
 ```
@@ -80,6 +82,7 @@ go build .
 | Detailed metadata | `-l`, `--long` |
 | Human-readable sizes | `-r`, `--readable` |
 | Include/exclude filters | `--include PATTERN`, `--exclude PATTERN` |
+| Sorting | `--sort name|size|modified|type`, `--reverse`, `--dirs-first` |
 | JSON output | `--json` |
 | Hidden files | `-a`, `--all` |
 | Directory-only view | `--dirs-only` |
