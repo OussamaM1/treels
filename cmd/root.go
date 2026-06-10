@@ -3,6 +3,7 @@ package cmd
 
 import (
 	"fmt"
+	"io"
 	"os"
 
 	"github.com/oussamaM1/treels/module"
@@ -14,9 +15,13 @@ const version = "v1.3.1"
 
 // Execute func - runs the root command.
 func Execute() {
-	if err := newRootCmd().Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+	execute(newRootCmd(), os.Stderr, os.Exit)
+}
+
+func execute(cmd *cobra.Command, errorOutput io.Writer, exit func(int)) {
+	if err := cmd.Execute(); err != nil {
+		_, _ = fmt.Fprintln(errorOutput, err)
+		exit(1)
 	}
 }
 

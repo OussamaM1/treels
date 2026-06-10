@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 	"time"
@@ -21,6 +22,42 @@ func TestDispatcher_MissingDirectory(t *testing.T) {
 
 	if output.Len() != 0 {
 		t.Fatalf("dispatcher() output = %q, want no output on validation error", output.String())
+	}
+}
+
+func TestDispatcher_WriteErrors(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	tests := []struct {
+		name      string
+		failAfter int
+		flags     module.Flags
+	}{
+		{
+			name:      "root dot write error",
+			failAfter: 0,
+			flags:     module.Flags{HideIcon: true},
+		},
+		{
+			name:      "flat listing write error",
+			failAfter: 1,
+			flags:     module.Flags{HideIcon: true},
+		},
+		{
+			name:      "tree listing write error",
+			failAfter: 1,
+			flags:     module.Flags{HideIcon: true, ShowTreeView: true},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			err := dispatcher(module.Options{Directory: dir, Flags: tt.flags}, &failingWriter{failAfter: tt.failAfter})
+			if err == nil {
+				t.Fatal("dispatcher() error = nil, want write error")
+			}
+		})
 	}
 }
 
@@ -87,6 +124,65 @@ func TestDispatcher_ListDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_LongListDirectory(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "alpha.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, ".hidden"), "secret")
+	mustMkdir(t, filepath.Join(dir, "subpkg"))
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:       true,
+			ShowLongFormat: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{".", "-rw", "drwx", "alpha.go", "subpkg", "1 directories, 1 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	for _, missing := range []string{".hidden", "alpha.go (12 B)"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
+func TestDispatcher_LongListDirectoryReadableSize(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "large.bin"), strings.Repeat("x", 1536))
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:         true,
+			ShowLongFormat:   true,
+			ShowReadableSize: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"large.bin", "1.5 KB", "0 directories, 1 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	if strings.Contains(got, "large.bin (1.5 KB)") {
+		t.Fatalf("dispatcher() output = %q, want size in metadata column only", got)
+	}
+}
+
 func TestListAndTreeDirectory_ReadErrors(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "regular.txt")
 	mustWriteFile(t, path, "content")
@@ -99,6 +195,23 @@ func TestListAndTreeDirectory_ReadErrors(t *testing.T) {
 	}
 	if _, _, err := treeDirectory(options, &output, "", true, 0); err == nil {
 		t.Fatal("treeDirectory() error = nil, want error")
+	}
+}
+
+func TestListDirectory_LongWriteError(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	options := directoryOptions{Options: module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:       true,
+			ShowLongFormat: true,
+		},
+	}}
+	_, _, err := listDirectory(options, &failingWriter{})
+	if err == nil {
+		t.Fatal("listDirectory() error = nil, want write error")
 	}
 }
 
@@ -126,6 +239,89 @@ func TestDispatcher_TreeDirectory(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
 		}
+	}
+}
+
+func TestDispatcher_LongTreeDirectory(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "subpkg"))
+	mustWriteFile(t, filepath.Join(dir, "subpkg", "nested.go"), "package nested")
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:       true,
+			ShowTreeView:   true,
+			ShowLongFormat: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"├── -", "└── d", "main.go", "nested.go", "1 directories, 2 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+}
+
+func TestDispatcher_TreeDirectoryChildReadError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission bits are not reliable for this test on windows")
+	}
+
+	dir := t.TempDir()
+	restricted := filepath.Join(dir, "restricted")
+	mustMkdir(t, restricted)
+	if err := os.Chmod(restricted, 0o000); err != nil {
+		t.Fatalf("Chmod(%q) error = %v", restricted, err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(restricted, 0o755)
+	})
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags:     module.Flags{HideIcon: true, ShowTreeView: true},
+	}, &output)
+	if err == nil {
+		t.Skip("restricted directory remained readable despite mode 000")
+	}
+	if !strings.Contains(err.Error(), "read directory") {
+		t.Fatalf("dispatcher() error = %q, want read directory context", err)
+	}
+}
+
+func TestDispatcher_JSONTreeDirectoryChildReadError(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission bits are not reliable for this test on windows")
+	}
+
+	dir := t.TempDir()
+	restricted := filepath.Join(dir, "restricted")
+	mustMkdir(t, restricted)
+	if err := os.Chmod(restricted, 0o000); err != nil {
+		t.Fatalf("Chmod(%q) error = %v", restricted, err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(restricted, 0o755)
+	})
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags:     module.Flags{ShowJSON: true, ShowTreeView: true},
+	}, &output)
+	if err == nil {
+		t.Skip("restricted directory remained readable despite mode 000")
+	}
+	if !strings.Contains(err.Error(), "read directory") {
+		t.Fatalf("dispatcher() error = %q, want read directory context", err)
 	}
 }
 
@@ -353,6 +549,40 @@ func TestDispatcher_DirsOnlyWithGitIgnore(t *testing.T) {
 	}
 }
 
+func TestDispatcher_LongDirsOnlyWithGitIgnore(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "ignored-dir/\n")
+	mustMkdir(t, filepath.Join(dir, "ignored-dir"))
+	mustMkdir(t, filepath.Join(dir, "visible-dir"))
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:         true,
+			ShowLongFormat:   true,
+			ShowDirsOnly:     true,
+			RespectGitIgnore: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"drwx", "visible-dir", "1 directories"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	for _, missing := range []string{"ignored-dir", "main.go", "0 files"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
 func TestDispatcher_ListDirectoryGitIgnore(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "*.log\nignored-dir/\n!keep.log\n")
@@ -448,6 +678,47 @@ func TestDispatcher_GitIgnoreMissingFile(t *testing.T) {
 	}
 }
 
+func TestNewGitIgnoreMatcherEmptyRules(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, ".gitignore"), "\n# comments only\n   \n")
+
+	matcher, err := newGitIgnoreMatcher(dir)
+	if err != nil {
+		t.Fatalf("newGitIgnoreMatcher() error = %v, want nil", err)
+	}
+	if matcher != nil {
+		t.Fatalf("newGitIgnoreMatcher() = %+v, want nil for empty rules", matcher)
+	}
+}
+
+func TestDispatcher_GitIgnoreUnreadableFile(t *testing.T) {
+	if runtime.GOOS == "windows" {
+		t.Skip("permission bits are not reliable for this test on windows")
+	}
+
+	dir := t.TempDir()
+	gitignorePath := filepath.Join(dir, ".gitignore")
+	mustWriteFile(t, gitignorePath, "ignored.txt\n")
+	if err := os.Chmod(gitignorePath, 0o000); err != nil {
+		t.Fatalf("Chmod(%q) error = %v", gitignorePath, err)
+	}
+	t.Cleanup(func() {
+		_ = os.Chmod(gitignorePath, 0o644)
+	})
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags:     module.Flags{RespectGitIgnore: true},
+	}, &output)
+	if err == nil {
+		t.Skip(".gitignore remained readable despite mode 000")
+	}
+	if !strings.Contains(err.Error(), "read") {
+		t.Fatalf("dispatcher() error = %q, want read context", err)
+	}
+}
+
 func TestDispatcher_GitIgnoreWithHiddenFiles(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, ".gitignore"), ".env\n")
@@ -514,6 +785,11 @@ func TestGitIgnoreRuleParsingAndMatching(t *testing.T) {
 			want:     true,
 		},
 		{
+			name:     "empty negated rule",
+			line:     "!   ",
+			wantRule: false,
+		},
+		{
 			name:     "negated rule",
 			line:     "!keep.log",
 			path:     "keep.log",
@@ -527,6 +803,11 @@ func TestGitIgnoreRuleParsingAndMatching(t *testing.T) {
 			path:     "dist",
 			wantRule: true,
 			want:     true,
+		},
+		{
+			name:     "slashes only rule",
+			line:     "/",
+			wantRule: false,
 		},
 		{
 			name:     "directory only does not match file",
@@ -580,6 +861,11 @@ func TestGitIgnoreRuleParsingAndMatching(t *testing.T) {
 }
 
 func TestGitIgnoreMatcherIgnores(t *testing.T) {
+	var nilMatcher *gitIgnoreMatcher
+	if nilMatcher.ignores("debug.log", false) {
+		t.Fatal("nil matcher ignores() = true, want false")
+	}
+
 	root := t.TempDir()
 	matcher := &gitIgnoreMatcher{
 		root: root,
@@ -771,6 +1057,69 @@ func TestFormatFileWithOptions_WithIcons(t *testing.T) {
 	}
 }
 
+func TestFormatFileWithOptions_LongFormat(t *testing.T) {
+	modTime := time.Date(2026, 6, 9, 12, 30, 0, 0, time.UTC)
+	file := fakeFileInfo{name: "main.go", size: 1536, mode: 0o644, modTime: modTime}
+
+	got := stripANSI(formatFileWithOptions("", file, module.Flags{HideIcon: true, ShowLongFormat: true}))
+	want := "-rw-r--r--        1536  2026-06-09  main.go"
+	if got != want {
+		t.Fatalf("formatFileWithOptions() = %q, want %q", got, want)
+	}
+
+	got = stripANSI(formatFileWithOptions("├── ", file, module.Flags{HideIcon: true, ShowLongFormat: true, ShowReadableSize: true}))
+	for _, want := range []string{"├── -rw-r--r--", "1.5 KB", "2026-06-09", "main.go"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("formatFileWithOptions() = %q, want to contain %q", got, want)
+		}
+	}
+
+	dir := fakeFileInfo{name: "cmd", size: 64, isDir: true, mode: os.ModeDir | 0o755, modTime: modTime}
+	got = stripANSI(formatFileWithOptions("", dir, module.Flags{HideIcon: true, ShowLongFormat: true}))
+	for _, want := range []string{"drwxr-xr-x", "64", "2026-06-09", "cmd"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("formatFileWithOptions() = %q, want to contain %q", got, want)
+		}
+	}
+}
+
+func TestFormatFileWithOptions_LongFormatWithIcons(t *testing.T) {
+	file := fakeFileInfo{
+		name:    "main.go",
+		size:    12,
+		mode:    0o644,
+		modTime: time.Date(2026, 6, 9, 12, 30, 0, 0, time.UTC),
+	}
+
+	got := formatFileWithOptions("", file, module.Flags{ShowLongFormat: true})
+	for _, want := range []string{module.GoLangIcon, "-rw-r--r--", "2026-06-09", "main.go"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("formatFileWithOptions() = %q, want to contain %q", got, want)
+		}
+	}
+}
+
+func TestFormatLongSize(t *testing.T) {
+	tests := []struct {
+		name     string
+		size     int64
+		readable bool
+		want     string
+	}{
+		{name: "raw bytes", size: 1536, want: "1536"},
+		{name: "negative raw bytes", size: -1, want: "0"},
+		{name: "readable", size: 1536, readable: true, want: "1.5 KB"},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			if got := formatLongSize(tt.size, tt.readable); got != tt.want {
+				t.Fatalf("formatLongSize(%d, %t) = %q, want %q", tt.size, tt.readable, got, tt.want)
+			}
+		})
+	}
+}
+
 func TestCheckDefaultDirectory(t *testing.T) {
 	var directory string
 	if err := CheckDefaultDirectory(&directory); err != nil {
@@ -789,9 +1138,68 @@ func TestCheckDefaultDirectory(t *testing.T) {
 	}
 }
 
+func TestCheckDefaultDirectoryGetwdError(t *testing.T) {
+	original := getWorkingDirectory
+	getWorkingDirectory = func() (string, error) {
+		return "", os.ErrPermission
+	}
+	defer func() {
+		getWorkingDirectory = original
+	}()
+
+	var directory string
+	err := CheckDefaultDirectory(&directory)
+	if err == nil {
+		t.Fatal("CheckDefaultDirectory() error = nil, want getwd error")
+	}
+	if !strings.Contains(err.Error(), "get current working directory") {
+		t.Fatalf("CheckDefaultDirectory() error = %q, want getwd context", err)
+	}
+}
+
 func TestCloseDirectoryNil(t *testing.T) {
 	if err := closeDirectory(nil); err != nil {
 		t.Fatalf("closeDirectory(nil) error = %v, want nil", err)
+	}
+}
+
+func TestCloseDirectoryAlreadyClosed(t *testing.T) {
+	dir, err := os.Open(t.TempDir())
+	if err != nil {
+		t.Fatalf("Open() error = %v", err)
+	}
+	if err := dir.Close(); err != nil {
+		t.Fatalf("Close() error = %v", err)
+	}
+	if err := closeDirectory(dir); err == nil {
+		t.Fatal("closeDirectory() error = nil, want error for already closed directory")
+	}
+}
+
+func TestReadDirectoryMissingPath(t *testing.T) {
+	files, dir, err := readDirectory(filepath.Join(t.TempDir(), "missing"))
+	if err == nil {
+		t.Fatal("readDirectory() error = nil, want open error")
+	}
+	if files != nil {
+		t.Fatalf("readDirectory() files = %v, want nil", files)
+	}
+	if dir != nil {
+		t.Fatalf("readDirectory() directory = %v, want nil", dir)
+	}
+}
+
+func TestGetTerminalWidthUsesDetectedWidth(t *testing.T) {
+	original := terminalSize
+	terminalSize = func(int) (int, int, error) {
+		return 120, 40, nil
+	}
+	defer func() {
+		terminalSize = original
+	}()
+
+	if got := getTerminalWidth(); got != 120 {
+		t.Fatalf("getTerminalWidth() = %d, want detected width", got)
 	}
 }
 
@@ -868,6 +1276,11 @@ func TestMatchPatternSegmentsFailures(t *testing.T) {
 			patternSegments: []string{"src"},
 			nameSegments:    []string{"cmd"},
 		},
+		{
+			name:            "double star no match",
+			patternSegments: []string{"**", "*.go"},
+			nameSegments:    []string{"src", "main.txt"},
+		},
 	}
 
 	for _, tt := range tests {
@@ -935,6 +1348,37 @@ func TestDispatcher_JSONFlatDirectory(t *testing.T) {
 	}
 	if strings.Contains(output.String(), "directories,") || strings.Contains(output.String(), "├──") {
 		t.Fatalf("json output = %q, want no human formatted output", output.String())
+	}
+}
+
+func TestDispatcher_JSONIgnoresLongFormat(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			ShowJSON:         true,
+			ShowLongFormat:   true,
+			ShowReadableSize: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	var got jsonOutput
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, output = %q", err, output.String())
+	}
+	if got.Summary.Files != 1 || len(got.Entries) != 1 || got.Entries[0].Name != "main.go" {
+		t.Fatalf("json output = %+v, want one main.go file", got)
+	}
+	for _, missing := range []string{"-rw", "1.5 KB", "directories,"} {
+		if strings.Contains(output.String(), missing) {
+			t.Fatalf("json output = %q, want no long human output containing %q", output.String(), missing)
+		}
 	}
 }
 
@@ -1116,9 +1560,11 @@ func mustMkdir(t *testing.T, path string) {
 }
 
 type fakeFileInfo struct {
-	name  string
-	size  int64
-	isDir bool
+	name    string
+	size    int64
+	isDir   bool
+	mode    os.FileMode
+	modTime time.Time
 }
 
 func (f fakeFileInfo) Name() string {
@@ -1130,13 +1576,19 @@ func (f fakeFileInfo) Size() int64 {
 }
 
 func (f fakeFileInfo) Mode() os.FileMode {
-	if f.isDir {
-		return os.ModeDir
+	if f.mode != 0 {
+		return f.mode
 	}
-	return 0
+	if f.isDir {
+		return os.ModeDir | 0o755
+	}
+	return 0o644
 }
 
 func (f fakeFileInfo) ModTime() time.Time {
+	if !f.modTime.IsZero() {
+		return f.modTime
+	}
 	return time.Time{}
 }
 

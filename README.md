@@ -18,6 +18,7 @@ treels -t --depth 2    # tree view, limited to two levels
 treels -t --gitignore  # tree view, excluding .gitignore matches
 treels -t --dirs-only  # show directory structure only
 treels --json          # machine-readable output
+treels --long          # detailed listing with mode, size, and date
 treels --no-summary    # hide the final count line
 ```
 
@@ -90,6 +91,7 @@ $ treels -t --depth 2 --no-icons service
 - `--depth N` to keep tree output readable in large repositories.
 - `--dirs-only` to inspect folder structure without file-level noise.
 - `--json` for scripts and automation.
+- `--long` detailed listing with permissions, size, and modification date.
 - `--readable` file sizes.
 - `--all` support for hidden files.
 - `--no-icons` fallback for terminals without icon fonts.
@@ -167,6 +169,13 @@ treels --json
 treels --tree --json --depth 2
 ```
 
+Show detailed metadata:
+
+```bash
+treels --long
+treels --tree --long
+```
+
 Show readable sizes:
 
 ```bash
@@ -195,6 +204,7 @@ treels --no-summary
 | `--depth N` | Limit tree recursion depth. |
 | `--gitignore` | Respect `.gitignore` rules from the target directory. |
 | `--json` | Output machine-readable JSON. |
+| `-l`, `--long` | Show detailed file metadata. |
 | `--no-icons` | Disable file and folder icons. |
 | `--no-summary` | Hide the final file and directory count. |
 | `-r`, `--readable` | Show human-readable file and directory sizes. |

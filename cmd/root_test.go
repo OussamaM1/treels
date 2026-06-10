@@ -10,6 +10,24 @@ import (
 	"testing"
 )
 
+func TestExecuteCommandErrorPath(t *testing.T) {
+	cmd := newRootCmd()
+	cmd.SetArgs([]string{"one", "two"})
+
+	var output bytes.Buffer
+	var exitCode int
+	execute(cmd, &output, func(code int) {
+		exitCode = code
+	})
+
+	if exitCode != 1 {
+		t.Fatalf("execute() exit code = %d, want 1", exitCode)
+	}
+	if !strings.Contains(output.String(), "accepts at most 1 arg") {
+		t.Fatalf("execute() error output = %q, want too many args error", output.String())
+	}
+}
+
 func TestRootCmd_InvalidPath(t *testing.T) {
 	cmd := newRootCmd()
 	cmd.SetArgs([]string{filepath.Join(t.TempDir(), "missing")})
@@ -87,6 +105,22 @@ func TestRootCmd_VersionFlag(t *testing.T) {
 	}
 }
 
+func TestExecute_VersionFlag(t *testing.T) {
+	originalArgs := os.Args
+	os.Args = []string{"treels", "--version"}
+	defer func() {
+		os.Args = originalArgs
+	}()
+
+	output := captureStdout(t, func() {
+		Execute()
+	})
+
+	if got := output; got != "treels v1.3.1\n" {
+		t.Fatalf("Execute() output = %q, want version output", got)
+	}
+}
+
 func TestRootCmd_ValidPathWithFlags(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
@@ -124,6 +158,44 @@ func TestRootCmd_ReadableFlag(t *testing.T) {
 
 	if !strings.Contains(output, "main.go (12 B)") {
 		t.Fatalf("Execute() output = %q, want readable file size", output)
+	}
+}
+
+func TestRootCmd_LongFlag(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+	}{
+		{name: "long flag", args: []string{"--long"}},
+		{name: "short flag", args: []string{"-l"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+				t.Fatalf("WriteFile() error = %v", err)
+			}
+
+			output := captureStdout(t, func() {
+				cmd := newRootCmd()
+				args := append(tt.args, "--no-icons", dir)
+				cmd.SetArgs(args)
+
+				if err := cmd.Execute(); err != nil {
+					t.Fatalf("Execute() error = %v, want nil", err)
+				}
+			})
+
+			for _, want := range []string{"-rw", "main.go", "12", "0 directories, 1 files"} {
+				if !strings.Contains(output, want) {
+					t.Fatalf("Execute() output = %q, want to contain %q", output, want)
+				}
+			}
+			if strings.Contains(output, "main.go (12 B)") {
+				t.Fatalf("Execute() output = %q, want size in metadata column only", output)
+			}
+		})
 	}
 }
 
