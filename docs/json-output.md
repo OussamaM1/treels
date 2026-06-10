@@ -1,5 +1,13 @@
 # JSON output
 
+## Table of contents
+
+- [Flat JSON example](#flat-json-example)
+- [Tree JSON example](#tree-json-example)
+- [Schema](#schema)
+- [Flag behavior](#flag-behavior)
+- [Stability notes](#stability-notes)
+
 Use `--json` when `treels` output needs to be consumed by scripts or other tools.
 
 ```bash
@@ -116,6 +124,8 @@ Most filtering flags affect JSON output:
 | `--all` | Includes hidden entries. |
 | `--dirs-only` | Omits file entries. |
 | `--gitignore` | Omits entries matched by the target directory's `.gitignore`. |
+| `--include PATTERN` | Includes only matching entries. In tree mode, parent directories stay visible when they contain included descendants. |
+| `--exclude PATTERN` | Omits matching entries. Excluded directories are not traversed. |
 
 Text formatting flags do not affect JSON output:
 

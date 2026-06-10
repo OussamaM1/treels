@@ -124,6 +124,105 @@ func TestDispatcher_ListDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_ListDirectoryIncludeExclude(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+	mustWriteFile(t, filepath.Join(dir, "debug.log"), "debug")
+	mustMkdir(t, filepath.Join(dir, "service"))
+	mustWriteFile(t, filepath.Join(dir, "service", "nested.go"), "package service")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:        true,
+			IncludePatterns: []string{"*.go", "*.md"},
+			ExcludePatterns: []string{"debug.log"},
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"main.go", "README.md", "0 directories, 2 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	for _, missing := range []string{"debug.log", "service", "nested.go"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
+func TestDispatcher_TreeDirectoryIncludePreservesParents(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "cmd"))
+	mustWriteFile(t, filepath.Join(dir, "cmd", "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "cmd", "debug.log"), "debug")
+	mustMkdir(t, filepath.Join(dir, "docs"))
+	mustWriteFile(t, filepath.Join(dir, "docs", "guide.md"), "guide")
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:        true,
+			ShowTreeView:    true,
+			IncludePatterns: []string{"*.go"},
+			ExcludePatterns: []string{"*.log"},
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"cmd", "main.go", "1 directories, 1 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+	for _, missing := range []string{"debug.log", "docs", "guide.md", "README.md"} {
+		if strings.Contains(got, missing) {
+			t.Fatalf("dispatcher() output = %q, want not to contain %q", got, missing)
+		}
+	}
+}
+
+func TestDispatcher_TreeDirectoryIncludeHonorsDepth(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "cmd"))
+	mustWriteFile(t, filepath.Join(dir, "cmd", "main.go"), "package main")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:        true,
+			ShowTreeView:    true,
+			IncludePatterns: []string{"*.go"},
+			TreeDepth:       1,
+			LimitTreeDepth:  true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	if strings.Contains(got, "cmd") || strings.Contains(got, "main.go") {
+		t.Fatalf("dispatcher() output = %q, want depth-limited include to hide nested match", got)
+	}
+	if !strings.Contains(got, "0 directories, 0 files") {
+		t.Fatalf("dispatcher() output = %q, want empty summary", got)
+	}
+}
+
 func TestDispatcher_LongListDirectory(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, "alpha.go"), "package main")
@@ -750,6 +849,83 @@ func TestDispatcher_GitIgnoreWithHiddenFiles(t *testing.T) {
 	}
 }
 
+func TestFilterPatternMatching(t *testing.T) {
+	root := t.TempDir()
+	tests := []struct {
+		name    string
+		pattern string
+		path    string
+		file    fakeFileInfo
+		want    bool
+	}{
+		{
+			name:    "basename glob matches nested file",
+			pattern: "*.go",
+			path:    filepath.Join(root, "cmd", "main.go"),
+			file:    fakeFileInfo{name: "main.go"},
+			want:    true,
+		},
+		{
+			name:    "path glob matches relative path",
+			pattern: "cmd/*.go",
+			path:    filepath.Join(root, "cmd", "main.go"),
+			file:    fakeFileInfo{name: "main.go"},
+			want:    true,
+		},
+		{
+			name:    "vendor double star matches vendor directory itself",
+			pattern: "vendor/**",
+			path:    filepath.Join(root, "vendor"),
+			file:    fakeFileInfo{name: "vendor", isDir: true},
+			want:    true,
+		},
+		{
+			name:    "vendor double star matches descendants",
+			pattern: "vendor/**",
+			path:    filepath.Join(root, "vendor", "pkg", "file.go"),
+			file:    fakeFileInfo{name: "file.go"},
+			want:    true,
+		},
+		{
+			name:    "directory-only pattern requires directory",
+			pattern: "build/",
+			path:    filepath.Join(root, "build"),
+			file:    fakeFileInfo{name: "build"},
+			want:    false,
+		},
+		{
+			name:    "directory-only pattern matches directory",
+			pattern: "build/",
+			path:    filepath.Join(root, "build"),
+			file:    fakeFileInfo{name: "build", isDir: true},
+			want:    true,
+		},
+		{
+			name:    "empty pattern does not match",
+			pattern: "   ",
+			path:    filepath.Join(root, "main.go"),
+			file:    fakeFileInfo{name: "main.go"},
+			want:    false,
+		},
+		{
+			name:    "outside root does not match",
+			pattern: "*.go",
+			path:    filepath.Join(t.TempDir(), "main.go"),
+			file:    fakeFileInfo{name: "main.go"},
+			want:    false,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := matchesFilterPattern(root, tt.pattern, tt.path, tt.file.Name(), tt.file.IsDir())
+			if got != tt.want {
+				t.Fatalf("matchesFilterPattern() = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
 func TestGitIgnoreRuleParsingAndMatching(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -1348,6 +1524,70 @@ func TestDispatcher_JSONFlatDirectory(t *testing.T) {
 	}
 	if strings.Contains(output.String(), "directories,") || strings.Contains(output.String(), "├──") {
 		t.Fatalf("json output = %q, want no human formatted output", output.String())
+	}
+}
+
+func TestDispatcher_JSONIncludeExclude(t *testing.T) {
+	dir := t.TempDir()
+	mustMkdir(t, filepath.Join(dir, "cmd"))
+	mustWriteFile(t, filepath.Join(dir, "cmd", "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "cmd", "debug.log"), "debug")
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			ShowJSON:        true,
+			ShowTreeView:    true,
+			IncludePatterns: []string{"*.go"},
+			ExcludePatterns: []string{"*.log"},
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	var got jsonOutput
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, output = %q", err, output.String())
+	}
+	if got.Summary.Directories != 1 || got.Summary.Files != 1 {
+		t.Fatalf("json summary = %+v, want 1 directory and 1 file", got.Summary)
+	}
+	if len(got.Entries) != 1 || got.Entries[0].Name != "cmd" {
+		t.Fatalf("json entries = %+v, want cmd directory", got.Entries)
+	}
+	if len(got.Entries[0].Children) != 1 || got.Entries[0].Children[0].Name != "main.go" {
+		t.Fatalf("json children = %+v, want only main.go", got.Entries[0].Children)
+	}
+}
+
+func TestDispatcher_JSONFlatIncludeExclude(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "debug.log"), "debug")
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			ShowJSON:        true,
+			IncludePatterns: []string{"*.go", "*.md"},
+			ExcludePatterns: []string{"README.md"},
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	var got jsonOutput
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, output = %q", err, output.String())
+	}
+	if got.Summary.Files != 1 || len(got.Entries) != 1 || got.Entries[0].Name != "main.go" {
+		t.Fatalf("json output = %+v, want only main.go", got)
 	}
 }
 

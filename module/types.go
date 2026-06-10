@@ -13,6 +13,8 @@ type Flags struct {
 	ShowLongFormat   bool
 	HideSummary      bool
 	RespectGitIgnore bool
+	IncludePatterns  []string
+	ExcludePatterns  []string
 	TreeDepth        int
 	LimitTreeDepth   bool
 }
