@@ -771,13 +771,79 @@ func humanReadableSize(size int64) string {
 	return fmt.Sprintf("%.1f %s", value, units[unitIndex])
 }
 
-// sortSlice func - sorts a slice of os.FileInfo objects alphabetically by file name.
+// sortSlice func - sorts a slice of os.FileInfo objects based on CLI flags.
 // It modifies the original slice in place.
-func sortSlice(files []os.FileInfo) {
-	// Sort files by name
+func sortSlice(files []os.FileInfo, flags module.Flags) {
 	sort.Slice(files, func(i, j int) bool {
-		return files[i].Name() < files[j].Name()
+		return lessFileInfo(files[i], files[j], flags)
 	})
+}
+
+func lessFileInfo(left, right os.FileInfo, flags module.Flags) bool {
+	if flags.DirsFirst && left.IsDir() != right.IsDir() {
+		return left.IsDir()
+	}
+
+	result := compareFileInfo(left, right, sortField(flags.SortBy))
+	if result == 0 {
+		result = compareName(left, right)
+	}
+	if flags.ReverseSort {
+		return result > 0
+	}
+
+	return result < 0
+}
+
+func sortField(value string) string {
+	if value == "" {
+		return "name"
+	}
+	return value
+}
+
+func compareFileInfo(left, right os.FileInfo, sortBy string) int {
+	switch sortBy {
+	case "size":
+		return compareInt64(left.Size(), right.Size())
+	case "modified":
+		return compareInt64(left.ModTime().UnixNano(), right.ModTime().UnixNano())
+	case "type":
+		return compareString(fileType(left), fileType(right))
+	default:
+		return compareName(left, right)
+	}
+}
+
+func compareName(left, right os.FileInfo) int {
+	return compareString(strings.ToLower(left.Name()), strings.ToLower(right.Name()))
+}
+
+func fileType(file os.FileInfo) string {
+	if file.IsDir() {
+		return ""
+	}
+	return strings.ToLower(filepath.Ext(file.Name()))
+}
+
+func compareString(left, right string) int {
+	if left < right {
+		return -1
+	}
+	if left > right {
+		return 1
+	}
+	return 0
+}
+
+func compareInt64(left, right int64) int {
+	if left < right {
+		return -1
+	}
+	if left > right {
+		return 1
+	}
+	return 0
 }
 
 // getTerminalWidth returns the width of the terminal

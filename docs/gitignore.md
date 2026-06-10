@@ -1,5 +1,13 @@
 # Gitignore support
 
+## Table of contents
+
+- [Current behavior](#current-behavior)
+- [Supported rule features](#supported-rule-features)
+- [Examples](#examples)
+- [Interaction with other flags](#interaction-with-other-flags)
+- [Limitations](#limitations)
+
 Use `--gitignore` to hide entries matched by `.gitignore` rules from the target directory.
 
 ```bash

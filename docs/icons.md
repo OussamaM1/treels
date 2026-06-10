@@ -1,5 +1,12 @@
 # Icons and fonts
 
+## Table of contents
+
+- [Requirements](#requirements)
+- [Disable icons](#disable-icons)
+- [Colors](#colors)
+- [File type support](#file-type-support)
+
 `treels` uses Nerd Font icons by default to make file types easier to scan.
 
 ## Requirements
