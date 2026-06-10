@@ -124,6 +124,61 @@ func TestDispatcher_ListDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_ListDirectorySorting(t *testing.T) {
+	dir := t.TempDir()
+	oldTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	midTime := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+	newTime := time.Date(2026, 3, 1, 0, 0, 0, 0, time.UTC)
+
+	mustWriteFile(t, filepath.Join(dir, "small.txt"), "x")
+	mustWriteFile(t, filepath.Join(dir, "medium.md"), "12345")
+	mustWriteFile(t, filepath.Join(dir, "large.go"), "1234567890")
+	mustMkdir(t, filepath.Join(dir, "folder"))
+	mustChtimes(t, filepath.Join(dir, "small.txt"), oldTime)
+	mustChtimes(t, filepath.Join(dir, "medium.md"), midTime)
+	mustChtimes(t, filepath.Join(dir, "large.go"), newTime)
+	mustChtimes(t, filepath.Join(dir, "folder"), midTime)
+
+	tests := []struct {
+		name  string
+		flags module.Flags
+		order []string
+	}{
+		{
+			name:  "sort by size",
+			flags: module.Flags{HideIcon: true, ShowLongFormat: true, SortBy: "size"},
+			order: []string{"small.txt", "medium.md", "large.go", "folder"},
+		},
+		{
+			name:  "sort by modified reverse",
+			flags: module.Flags{HideIcon: true, ShowLongFormat: true, SortBy: "modified", ReverseSort: true},
+			order: []string{"large.go", "medium.md", "folder", "small.txt"},
+		},
+		{
+			name:  "sort by type",
+			flags: module.Flags{HideIcon: true, ShowLongFormat: true, SortBy: "type"},
+			order: []string{"folder", "large.go", "medium.md", "small.txt"},
+		},
+		{
+			name:  "dirs first with reverse name",
+			flags: module.Flags{HideIcon: true, ShowLongFormat: true, SortBy: "name", ReverseSort: true, DirsFirst: true},
+			order: []string{"folder", "small.txt", "medium.md", "large.go"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			var output bytes.Buffer
+			err := dispatcher(module.Options{Directory: dir, Flags: tt.flags}, &output)
+			if err != nil {
+				t.Fatalf("dispatcher() error = %v, want nil", err)
+			}
+
+			assertOutputOrder(t, stripANSI(output.String()), tt.order)
+		})
+	}
+}
+
 func TestDispatcher_LongListDirectory(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, "alpha.go"), "package main")
@@ -1351,6 +1406,40 @@ func TestDispatcher_JSONFlatDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_JSONFlatDirectorySorting(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "small.txt"), "x")
+	mustWriteFile(t, filepath.Join(dir, "large.go"), "1234567890")
+	mustWriteFile(t, filepath.Join(dir, "medium.md"), "12345")
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			ShowJSON:    true,
+			SortBy:      "size",
+			ReverseSort: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	var got jsonOutput
+	if err := json.Unmarshal(output.Bytes(), &got); err != nil {
+		t.Fatalf("json.Unmarshal() error = %v, output = %q", err, output.String())
+	}
+	if len(got.Entries) != 3 {
+		t.Fatalf("json entries length = %d, want 3", len(got.Entries))
+	}
+	wantOrder := []string{"large.go", "medium.md", "small.txt"}
+	for i, want := range wantOrder {
+		if got.Entries[i].Name != want {
+			t.Fatalf("json entry %d = %q, want %q; entries = %+v", i, got.Entries[i].Name, want, got.Entries)
+		}
+	}
+}
+
 func TestDispatcher_JSONIgnoresLongFormat(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
@@ -1417,9 +1506,9 @@ func TestDispatcher_JSONTreeDirectoryWithDepth(t *testing.T) {
 	if len(got.Entries) != 2 {
 		t.Fatalf("json entries length = %d, want 2", len(got.Entries))
 	}
-	cmdEntry := got.Entries[1]
-	if cmdEntry.Name != "cmd" {
-		t.Fatalf("second json entry = %+v, want cmd directory", cmdEntry)
+	cmdEntry, ok := findJSONEntry(got.Entries, "cmd")
+	if !ok {
+		t.Fatalf("json entries = %+v, want cmd directory", got.Entries)
 	}
 	if len(cmdEntry.Children) != 0 {
 		t.Fatalf("cmd children = %+v, want none at depth 1", cmdEntry.Children)
@@ -1525,6 +1614,99 @@ func TestJSONEntryAndSummaryHelpers(t *testing.T) {
 	}
 }
 
+func TestSortSlice(t *testing.T) {
+	oldTime := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
+	newTime := time.Date(2026, 2, 1, 0, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name  string
+		files []os.FileInfo
+		flags module.Flags
+		want  []string
+	}{
+		{
+			name: "defaults to case-insensitive name sort",
+			files: []os.FileInfo{
+				fakeFileInfo{name: "beta.go"},
+				fakeFileInfo{name: "Alpha.go"},
+			},
+			want: []string{"Alpha.go", "beta.go"},
+		},
+		{
+			name: "sorts by size with name tie-breaker",
+			files: []os.FileInfo{
+				fakeFileInfo{name: "z.txt", size: 10},
+				fakeFileInfo{name: "a.txt", size: 10},
+				fakeFileInfo{name: "m.txt", size: 1},
+			},
+			flags: module.Flags{SortBy: "size"},
+			want:  []string{"m.txt", "a.txt", "z.txt"},
+		},
+		{
+			name: "sorts by modified",
+			files: []os.FileInfo{
+				fakeFileInfo{name: "new.go", modTime: newTime},
+				fakeFileInfo{name: "old.go", modTime: oldTime},
+			},
+			flags: module.Flags{SortBy: "modified"},
+			want:  []string{"old.go", "new.go"},
+		},
+		{
+			name: "sorts by type and reverse",
+			files: []os.FileInfo{
+				fakeFileInfo{name: "a.go"},
+				fakeFileInfo{name: "b.txt"},
+				fakeFileInfo{name: "c.md"},
+			},
+			flags: module.Flags{SortBy: "type", ReverseSort: true},
+			want:  []string{"b.txt", "c.md", "a.go"},
+		},
+		{
+			name: "dirs first is not reversed",
+			files: []os.FileInfo{
+				fakeFileInfo{name: "a.go"},
+				fakeFileInfo{name: "dir", isDir: true},
+				fakeFileInfo{name: "z.go"},
+			},
+			flags: module.Flags{ReverseSort: true, DirsFirst: true},
+			want:  []string{"dir", "z.go", "a.go"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			sortSlice(tt.files, tt.flags)
+			if got := fileInfoNames(tt.files); strings.Join(got, ",") != strings.Join(tt.want, ",") {
+				t.Fatalf("sortSlice() order = %v, want %v", got, tt.want)
+			}
+		})
+	}
+}
+
+func TestCompareHelpers(t *testing.T) {
+	if got := sortField(""); got != "name" {
+		t.Fatalf("sortField(empty) = %q, want name", got)
+	}
+	if got := compareString("a", "b"); got != -1 {
+		t.Fatalf("compareString(a, b) = %d, want -1", got)
+	}
+	if got := compareString("b", "a"); got != 1 {
+		t.Fatalf("compareString(b, a) = %d, want 1", got)
+	}
+	if got := compareString("a", "a"); got != 0 {
+		t.Fatalf("compareString(a, a) = %d, want 0", got)
+	}
+	if got := compareInt64(1, 2); got != -1 {
+		t.Fatalf("compareInt64(1, 2) = %d, want -1", got)
+	}
+	if got := compareInt64(2, 1); got != 1 {
+		t.Fatalf("compareInt64(2, 1) = %d, want 1", got)
+	}
+	if got := compareInt64(1, 1); got != 0 {
+		t.Fatalf("compareInt64(1, 1) = %d, want 0", got)
+	}
+}
+
 func TestIsHidden(t *testing.T) {
 	tests := []struct {
 		name  string
@@ -1557,6 +1739,45 @@ func mustMkdir(t *testing.T, path string) {
 	if err := os.Mkdir(path, 0o755); err != nil {
 		t.Fatalf("Mkdir(%q) error = %v", path, err)
 	}
+}
+
+func mustChtimes(t *testing.T, path string, timestamp time.Time) {
+	t.Helper()
+	if err := os.Chtimes(path, timestamp, timestamp); err != nil {
+		t.Fatalf("Chtimes(%q) error = %v", path, err)
+	}
+}
+
+func assertOutputOrder(t *testing.T, output string, orderedNames []string) {
+	t.Helper()
+	previousIndex := -1
+	for _, name := range orderedNames {
+		index := strings.Index(output, name)
+		if index == -1 {
+			t.Fatalf("output = %q, want to contain %q", output, name)
+		}
+		if index <= previousIndex {
+			t.Fatalf("output = %q, want %q after previous entries %v", output, name, orderedNames)
+		}
+		previousIndex = index
+	}
+}
+
+func fileInfoNames(files []os.FileInfo) []string {
+	names := make([]string, 0, len(files))
+	for _, file := range files {
+		names = append(names, file.Name())
+	}
+	return names
+}
+
+func findJSONEntry(entries []jsonEntry, name string) (jsonEntry, bool) {
+	for _, entry := range entries {
+		if entry.Name == name {
+			return entry, true
+		}
+	}
+	return jsonEntry{}, false
 }
 
 type fakeFileInfo struct {

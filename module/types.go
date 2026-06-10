@@ -13,6 +13,9 @@ type Flags struct {
 	ShowLongFormat   bool
 	HideSummary      bool
 	RespectGitIgnore bool
+	SortBy           string
+	ReverseSort      bool
+	DirsFirst        bool
 	TreeDepth        int
 	LimitTreeDepth   bool
 }

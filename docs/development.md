@@ -1,5 +1,18 @@
 # Development guide
 
+## Table of contents
+
+- [Requirements](#requirements)
+- [Setup](#setup)
+- [Run locally](#run-locally)
+- [Build](#build)
+- [Test](#test)
+- [Vet and lint](#vet-and-lint)
+- [CI](#ci)
+- [Project structure](#project-structure)
+- [Adding a new flag](#adding-a-new-flag)
+- [Testing documentation examples](#testing-documentation-examples)
+
 This guide covers local development commands for `treels`.
 
 ## Requirements

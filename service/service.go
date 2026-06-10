@@ -89,8 +89,8 @@ func listDirectory(options directoryOptions, output io.Writer) (fileCount, dirCo
 		}
 	}()
 
-	// sort files by name
-	sortSlice(files)
+	// sort files by requested order
+	sortSlice(files, options.Flags)
 
 	// Collect formatted file entries
 	var entries []string
@@ -151,8 +151,8 @@ func treeDirectory(options directoryOptions, output io.Writer, indent string, is
 		}
 	}()
 
-	// Sort files by name
-	sortSlice(files)
+	// Sort files by requested order
+	sortSlice(files, options.Flags)
 
 	// Print files and directories
 	fc, dc, err := printFilesAndDirectoriesTreeFormat(files, options, output, indent, isLastFolder, depth)

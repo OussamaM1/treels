@@ -11,6 +11,17 @@ Use it to inspect directories as a compact grid, expand them as a tree, hide pro
   <img src="treels.png" alt="treels preview" width="300">
 </p>
 
+## Table of contents
+
+- [Quick start](#quick-start)
+- [Installation](#installation)
+- [Features](#features)
+- [Usage](#usage)
+- [Preview](#preview)
+- [Documentation](#documentation)
+- [Development](#development)
+- [License](#license)
+
 ## Quick start
 
 ```bash
@@ -20,6 +31,8 @@ treels --tree --depth 2        # tree view limited to two levels
 treels --tree --gitignore      # exclude root .gitignore matches
 treels --tree --dirs-only      # show directory structure only
 treels --long --readable       # detailed listing with readable sizes
+treels --sort size --reverse   # sort entries by largest first
+treels --dirs-first            # group directories before files
 treels --json                  # machine-readable output
 treels --no-icons              # fallback for terminals without Nerd Fonts
 ```
@@ -66,6 +79,7 @@ go build .
 | Depth limit | `--depth N` |
 | Detailed metadata | `-l`, `--long` |
 | Human-readable sizes | `-r`, `--readable` |
+| Sorting | `--sort name|size|modified|type`, `--reverse`, `--dirs-first` |
 | JSON output | `--json` |
 | Hidden files | `-a`, `--all` |
 | Directory-only view | `--dirs-only` |

@@ -1,5 +1,15 @@
 # Contributing
 
+## Table of contents
+
+- [Getting started](#getting-started)
+- [Development workflow](#development-workflow)
+- [Contribution guidelines](#contribution-guidelines)
+- [Adding or changing CLI behavior](#adding-or-changing-cli-behavior)
+- [Documentation style](#documentation-style)
+- [Reporting bugs](#reporting-bugs)
+- [Feature requests](#feature-requests)
+
 Thanks for your interest in contributing to `treels`.
 
 ## Getting started
