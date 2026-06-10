@@ -124,6 +124,8 @@ Most filtering flags affect JSON output:
 | `--all` | Includes hidden entries. |
 | `--dirs-only` | Omits file entries. |
 | `--gitignore` | Omits entries matched by the target directory's `.gitignore`. |
+| `--include PATTERN` | Includes only matching entries. In tree mode, parent directories stay visible when they contain included descendants. |
+| `--exclude PATTERN` | Omits matching entries. Excluded directories are not traversed. |
 | `--sort name|size|modified|type` | Sorts JSON entries using the selected field. |
 | `--reverse` | Reverses JSON entry order for the selected sort. |
 | `--dirs-first` | Groups directory entries before file entries. |

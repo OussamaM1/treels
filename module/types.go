@@ -13,6 +13,8 @@ type Flags struct {
 	ShowLongFormat   bool
 	HideSummary      bool
 	RespectGitIgnore bool
+	IncludePatterns  []string
+	ExcludePatterns  []string
 	SortBy           string
 	ReverseSort      bool
 	DirsFirst        bool

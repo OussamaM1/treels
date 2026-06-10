@@ -6,6 +6,7 @@
 - [Supported rule features](#supported-rule-features)
 - [Examples](#examples)
 - [Interaction with other flags](#interaction-with-other-flags)
+- [Include/exclude filters vs `.gitignore`](#includeexclude-filters-vs-gitignore)
 - [Limitations](#limitations)
 
 Use `--gitignore` to hide entries matched by `.gitignore` rules from the target directory.
@@ -77,6 +78,19 @@ Will:
 | `--gitignore --dirs-only` | Ignored directories are omitted; files are already omitted by `--dirs-only`. |
 | `--gitignore --all` | Hidden files may be shown, but ignored hidden files are still omitted. |
 | `--gitignore --json` | JSON entries and summary counts reflect filtered output. |
+| `--gitignore --include "*.go"` | Applies `.gitignore` first, then include filters to the remaining entries. |
+| `--gitignore --exclude "*.log"` | Both ignored entries and excluded entries are omitted. |
+
+## Include/exclude filters vs `.gitignore`
+
+Use `--include` and `--exclude` for one-off filtering without editing `.gitignore`:
+
+```bash
+treels --include "*.go"
+treels --exclude "vendor/**"
+```
+
+Unlike `.gitignore`, these filters are provided directly on the command line and can be repeated.
 
 ## Limitations
 

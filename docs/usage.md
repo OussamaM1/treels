@@ -129,6 +129,26 @@ treels --tree --dirs-only
 treels --long --readable
 ```
 
+### Focus on specific file types
+
+```bash
+treels --include "*.go"
+treels --include "*.go" --include "*.md"
+```
+
+### Hide noisy files or directories
+
+```bash
+treels --exclude "*.log"
+treels --exclude "vendor/**"
+```
+
+### Combine include and exclude filters
+
+```bash
+treels --tree --include "*.go" --exclude "vendor/**"
+```
+
 ### Sort by largest files first
 
 ```bash
@@ -162,6 +182,8 @@ treels --json
 | `--dirs-only` | Show only directories. |
 | `--depth N` | Limit tree recursion depth. |
 | `--gitignore` | Respect `.gitignore` rules from the target directory. |
+| `--include PATTERN` | Show only entries matching a glob pattern. Can be used multiple times. |
+| `--exclude PATTERN` | Hide entries matching a glob pattern. Can be used multiple times. |
 | `--json` | Output machine-readable JSON. |
 | `-l`, `--long` | Show detailed file metadata. |
 | `--sort name|size|modified|type` | Sort entries by name, size, modification time, or file type. Defaults to `name`. |
@@ -181,6 +203,9 @@ treels --json
 | `--tree --dirs-only` | Recursively shows directories while omitting files. |
 | `--long --readable` | Shows human-readable sizes in the long metadata column. |
 | `--tree --long` | Shows tree branches plus metadata for each entry. |
+| `--include "*.go" --include "*.md"` | Shows entries matching either include pattern. |
+| `--include "*.go" --exclude "vendor/**"` | Shows Go files except entries under `vendor`. |
+| `--tree --include "*.go"` | Keeps parent directories visible when they contain included files. |
 | `--sort size --reverse` | Shows largest entries first. |
 | `--sort modified --reverse` | Shows newest entries first. |
 | `--dirs-first --reverse` | Keeps directories grouped first, then reverses the selected sort within each group. |

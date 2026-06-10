@@ -199,6 +199,37 @@ func TestRootCmd_LongFlag(t *testing.T) {
 	}
 }
 
+func TestRootCmd_IncludeExcludeFlags(t *testing.T) {
+	dir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(dir, "main.go"), []byte("package main"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "README.md"), []byte("readme"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "debug.log"), []byte("debug"), 0o644); err != nil {
+		t.Fatalf("WriteFile() error = %v", err)
+	}
+
+	output := captureStdout(t, func() {
+		cmd := newRootCmd()
+		cmd.SetArgs([]string{"--include", "*.go", "--include", "*.md", "--exclude", "debug.log", "--no-icons", dir})
+
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("Execute() error = %v, want nil", err)
+		}
+	})
+
+	for _, want := range []string{"main.go", "README.md", "0 directories, 2 files"} {
+		if !strings.Contains(output, want) {
+			t.Fatalf("Execute() output = %q, want to contain %q", output, want)
+		}
+	}
+	if strings.Contains(output, "debug.log") {
+		t.Fatalf("Execute() output = %q, want debug.log excluded", output)
+	}
+}
+
 func TestRootCmd_SortFlags(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "small.txt"), []byte("x"), 0o644); err != nil {

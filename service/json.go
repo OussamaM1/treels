@@ -104,11 +104,11 @@ func collectJSONTreeEntries(options directoryOptions, depth int) (entries []json
 	}()
 
 	sortSlice(files, options.Flags)
-	for _, file := range files {
-		if !shouldShowFile(file, options) {
-			continue
-		}
-
+	visibleFiles, err := visibleTreeFiles(files, options, depth)
+	if err != nil {
+		return nil, jsonSummary{}, err
+	}
+	for _, file := range visibleFiles {
 		entry := newJSONEntry(options.Directory, file)
 		addJSONSummaryCount(&summary, file)
 

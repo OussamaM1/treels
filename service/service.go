@@ -22,6 +22,7 @@ const (
 
 type directoryOptions struct {
 	module.Options
+	root      string
 	gitIgnore *gitIgnoreMatcher
 }
 
@@ -38,7 +39,7 @@ func dispatcher(options module.Options, output io.Writer) error {
 		return err
 	}
 
-	traversalOptions := directoryOptions{Options: options}
+	traversalOptions := directoryOptions{Options: options, root: options.Directory}
 	if options.Flags.RespectGitIgnore {
 		gitIgnore, err := newGitIgnoreMatcher(options.Directory)
 		if err != nil {
@@ -154,8 +155,13 @@ func treeDirectory(options directoryOptions, output io.Writer, indent string, is
 	// Sort files by requested order
 	sortSlice(files, options.Flags)
 
+	visibleFiles, err := visibleTreeFiles(files, options, depth)
+	if err != nil {
+		return 0, 0, err
+	}
+
 	// Print files and directories
-	fc, dc, err := printFilesAndDirectoriesTreeFormat(files, options, output, indent, isLastFolder, depth)
+	fc, dc, err := printFilesAndDirectoriesTreeFormat(visibleFiles, options, output, indent, isLastFolder, depth)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -166,23 +172,14 @@ func reachedMaxDepth(flags module.Flags, depth int) bool {
 	return flags.LimitTreeDepth && depth >= flags.TreeDepth
 }
 
-func getLastVisibleIndex(files []os.FileInfo, options directoryOptions) int {
-	for i := len(files) - 1; i >= 0; i-- {
-		if shouldShowFile(files[i], options) {
-			return i
-		}
-	}
-	return -1
+func getLastVisibleIndex(files []os.FileInfo, _ directoryOptions) int {
+	return len(files) - 1
 }
 
 // printFilesAndDirectoriesTreeFormat - prints files and directories in tree format
 func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options directoryOptions, output io.Writer, indent string, isLastFolder bool, depth int) (fileCount, dirCount int, err error) {
 	lastVisibleIndex := getLastVisibleIndex(files, options)
 	for i, file := range files {
-		if !shouldShowFile(file, options) {
-			continue
-		}
-
 		isLast := i == lastVisibleIndex
 		prefix, childIndent := calculateIndent(indent, isLast)
 
@@ -207,20 +204,75 @@ func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options directoryOp
 
 // shouldShowFile determines if a file should be displayed based on visibility settings
 func shouldShowFile(file os.FileInfo, options directoryOptions) bool {
-	if isHidden(file.Name()) && !options.Flags.ShowHidden {
+	if !passesEntryFilters(file, options) {
 		return false
 	}
-
-	if options.Flags.ShowDirsOnly && !file.IsDir() {
-		return false
-	}
-
-	if options.gitIgnore == nil {
+	if !hasIncludePatterns(options) {
 		return true
 	}
 
 	filePath := filepath.Join(options.Directory, file.Name())
-	return !options.gitIgnore.ignores(filePath, file.IsDir())
+	return matchesIncludePattern(options, filePath, file)
+}
+
+func visibleTreeFiles(files []os.FileInfo, options directoryOptions, depth int) ([]os.FileInfo, error) {
+	visible := make([]os.FileInfo, 0, len(files))
+	for _, file := range files {
+		show, err := shouldShowTreeFile(file, options, depth)
+		if err != nil {
+			return nil, err
+		}
+		if show {
+			visible = append(visible, file)
+		}
+	}
+	return visible, nil
+}
+
+func shouldShowTreeFile(file os.FileInfo, options directoryOptions, depth int) (bool, error) {
+	if !passesEntryFilters(file, options) {
+		return false, nil
+	}
+	if !hasIncludePatterns(options) {
+		return true, nil
+	}
+
+	filePath := filepath.Join(options.Directory, file.Name())
+	if matchesIncludePattern(options, filePath, file) {
+		return true, nil
+	}
+	if !file.IsDir() {
+		return false, nil
+	}
+
+	childOptions := options
+	childOptions.Directory = filePath
+	return directoryHasIncludedDescendant(childOptions, depth+1)
+}
+
+func directoryHasIncludedDescendant(options directoryOptions, depth int) (bool, error) {
+	if reachedMaxDepth(options.Flags, depth) {
+		return false, nil
+	}
+
+	files, d, err := readDirectory(options.Directory)
+	if err != nil {
+		return false, fmt.Errorf("read directory %q: %w", options.Directory, err)
+	}
+	defer func() {
+		_ = closeDirectory(d)
+	}()
+
+	for _, file := range files {
+		show, err := shouldShowTreeFile(file, options, depth)
+		if err != nil {
+			return false, err
+		}
+		if show {
+			return true, nil
+		}
+	}
+	return false, nil
 }
 
 // calculateIndent returns the appropriate prefix and child indent strings

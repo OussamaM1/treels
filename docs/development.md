@@ -34,6 +34,7 @@ go mod download
 go run .
 go run . --tree --depth 2 --no-icons
 go run . --long --readable
+go run . --include "*.go" --exclude "*_test.go"
 ```
 
 ## Build
