@@ -4,31 +4,91 @@
 [![codecov](https://codecov.io/gh/OussamaM1/treels/branch/main/graph/badge.svg)](https://codecov.io/gh/OussamaM1/treels)
 
 `treels` is a Go CLI that blends the quick scan of `ls` with the structure of `tree`.
-Use it to inspect a directory as a compact grid, expand it as a tree, hide project noise with
-`.gitignore`, and keep large repositories readable with depth limits.
+Use it to inspect directories as a compact grid, expand them as a tree, hide project noise with
+`.gitignore`, show detailed metadata, and keep large repositories readable with depth limits.
 
 <p align="center">
-  <img src="treels.png" alt="treels picture" width="300">
+  <img src="treels.png" alt="treels preview" width="300">
 </p>
 
+## Quick start
+
 ```bash
-treels                 # compact ls-style view
-treels -t              # tree view
-treels -t --depth 2    # tree view, limited to two levels
-treels -t --gitignore  # tree view, excluding .gitignore matches
-treels -t --dirs-only  # show directory structure only
-treels --json          # machine-readable output
-treels --long          # detailed listing with mode, size, and date
-treels --no-summary    # hide the final count line
+treels                         # compact ls-style view
+treels --tree                  # recursive tree view
+treels --tree --depth 2        # tree view limited to two levels
+treels --tree --gitignore      # exclude root .gitignore matches
+treels --tree --dirs-only      # show directory structure only
+treels --long --readable       # detailed listing with readable sizes
+treels --json                  # machine-readable output
+treels --no-icons              # fallback for terminals without Nerd Fonts
 ```
 
 > [!NOTE]
 > File and folder icons look best with a Nerd Font installed. If your terminal does not support
 > Nerd Font glyphs, use `--no-icons`.
 
+## Installation
+
+### With Go
+
+```bash
+go install github.com/oussamaM1/treels@latest
+```
+
+Make sure your Go binary directory is in your `PATH`. You can check where Go installs binaries with:
+
+```bash
+go env GOPATH
+```
+
+The binary is usually placed in:
+
+```text
+$(go env GOPATH)/bin
+```
+
+### From source
+
+```bash
+git clone https://github.com/OussamaM1/treels.git
+cd treels
+go build .
+./treels --version
+```
+
+## Features
+
+| Feature | Flag |
+| --- | --- |
+| Compact grid listing | default |
+| Recursive tree view | `-t`, `--tree` |
+| Depth limit | `--depth N` |
+| Detailed metadata | `-l`, `--long` |
+| Human-readable sizes | `-r`, `--readable` |
+| JSON output | `--json` |
+| Hidden files | `-a`, `--all` |
+| Directory-only view | `--dirs-only` |
+| Respect root `.gitignore` | `--gitignore` |
+| Disable icons | `--no-icons` |
+| Hide text summary | `--no-summary` |
+| Version output | `-v`, `--version` |
+
+## Usage
+
+```bash
+treels [flags] [path]
+```
+
+If no path is provided, `treels` lists the current directory.
+
+For detailed usage examples and flag interactions, see [docs/usage.md](docs/usage.md).
+
 ## Preview
 
-Compact directory listing:
+Examples below use `--no-icons` so output is readable in any terminal.
+
+### Compact directory listing
 
 ```text
 $ treels --no-icons file-icons-example
@@ -49,14 +109,15 @@ typescript-file.ts       video.mp4                yaml-file.yml
 0 directories, 36 files
 ```
 
-Tree view with a depth limit:
+### Tree view with a depth limit
 
 ```text
-$ treels -t --depth 1 --gitignore --no-icons
+$ treels --tree --depth 1 --gitignore --no-icons
 .
 ├── LICENSE
 ├── README.md
 ├── cmd
+├── docs
 ├── example
 ├── file-icons-example
 ├── go.mod
@@ -66,181 +127,43 @@ $ treels -t --depth 1 --gitignore --no-icons
 ├── service
 └── utils
 
-6 directories, 5 files
+7 directories, 5 files
 ```
 
-Focused tree view for one directory:
+### Detailed listing
 
 ```text
-$ treels -t --depth 2 --no-icons service
+$ treels --long --readable --no-icons service
 .
-├── gitignore.go
-├── service.go
-├── service_test.go
-└── util.go
+-rw-r--r--      3.8 KB  2026-06-10  gitignore.go
+-rw-r--r--      4.0 KB  2026-06-10  json.go
+-rw-r--r--      7.1 KB  2026-06-10  service.go
+-rw-r--r--     35.0 KB  2026-06-10  service_test.go
+-rw-r--r--     18.0 KB  2026-06-10  util.go
 
-0 directories, 4 files
+0 directories, 5 files
 ```
 
-## Features
+## Documentation
 
-- Compact grid output for fast directory scans.
-- Recursive tree output with familiar branch characters.
-- Optional Nerd Font icons and file-type colors.
-- `--gitignore` support to skip generated files, dependencies, logs, and build output.
-- `--depth N` to keep tree output readable in large repositories.
-- `--dirs-only` to inspect folder structure without file-level noise.
-- `--json` for scripts and automation.
-- `--long` detailed listing with permissions, size, and modification date.
-- `--readable` file sizes.
-- `--all` support for hidden files.
-- `--no-icons` fallback for terminals without icon fonts.
-
-## Installation
-
-Install with Go:
-
-```bash
-go install github.com/oussamaM1/treels@latest
-```
-
-Make sure your Go binary directory is in your `PATH`. You can check where Go installs binaries with:
-
-```bash
-go env GOPATH
-```
-
-The binary is usually placed in:
-
-```text
-$(go env GOPATH)/bin
-```
-
-## Usage
-
-```bash
-treels [flags] [path]
-```
-
-If no path is provided, `treels` lists the current directory.
-
-## Examples
-
-List the current directory:
-
-```bash
-treels
-```
-
-Include hidden files:
-
-```bash
-treels --all
-```
-
-Show a tree:
-
-```bash
-treels --tree
-```
-
-Limit tree depth:
-
-```bash
-treels --tree --depth 2
-```
-
-Respect `.gitignore` rules:
-
-```bash
-treels --tree --gitignore
-```
-
-Show directories only:
-
-```bash
-treels --tree --dirs-only
-```
-
-Output JSON:
-
-```bash
-treels --json
-treels --tree --json --depth 2
-```
-
-Show detailed metadata:
-
-```bash
-treels --long
-treels --tree --long
-```
-
-Show readable sizes:
-
-```bash
-treels --readable
-```
-
-Disable icons:
-
-```bash
-treels --no-icons
-```
-
-Hide the final summary:
-
-```bash
-treels --no-summary
-```
-
-## Flags
-
-| Flag | Description |
-| --- | --- |
-| `-a`, `--all` | List hidden files and directories. |
-| `-t`, `--tree` | Show recursive tree view. |
-| `--dirs-only` | Show only directories. |
-| `--depth N` | Limit tree recursion depth. |
-| `--gitignore` | Respect `.gitignore` rules from the target directory. |
-| `--json` | Output machine-readable JSON. |
-| `-l`, `--long` | Show detailed file metadata. |
-| `--no-icons` | Disable file and folder icons. |
-| `--no-summary` | Hide the final file and directory count. |
-| `-r`, `--readable` | Show human-readable file and directory sizes. |
-| `-v`, `--version` | Print the current version. |
-| `-h`, `--help` | Show help. |
-
-## Fonts
-
-Icons require a Nerd Font-compatible terminal. Recommended setup:
-
-1. Install a Nerd Font, such as FiraCode Nerd Font.
-2. Select that font in your terminal profile.
-3. Run `treels` normally.
-
-If icons render as empty boxes or odd symbols, use:
-
-```bash
-treels --no-icons
-```
+- [Usage guide](docs/usage.md)
+- [JSON output](docs/json-output.md)
+- [Gitignore support](docs/gitignore.md)
+- [Icons and fonts](docs/icons.md)
+- [Development guide](docs/development.md)
+- [Contributing](CONTRIBUTING.md)
 
 ## Development
 
-Run tests:
-
 ```bash
 go test ./...
-```
-
-Run lint:
-
-```bash
+go vet ./...
 golangci-lint run
-```
-
-Build locally:
-
-```bash
 go build .
 ```
+
+See [docs/development.md](docs/development.md) for more details.
+
+## License
+
+This project is licensed under the terms in [LICENSE](LICENSE).
