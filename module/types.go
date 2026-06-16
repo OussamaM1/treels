@@ -13,6 +13,7 @@ type Flags struct {
 	ShowLongFormat   bool
 	HideSummary      bool
 	RespectGitIgnore bool
+	ShowGitStatus    bool
 	IncludePatterns  []string
 	ExcludePatterns  []string
 	SortBy           string

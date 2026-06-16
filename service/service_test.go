@@ -124,6 +124,96 @@ func TestDispatcher_ListDirectory(t *testing.T) {
 	}
 }
 
+func TestDispatcher_ListDirectoryGitStatus(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "new-file.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "ignored.log"), "ignored")
+
+	restore := stubGitStatusCommand(t, " M README.md\n?? new-file.go\n!! ignored.log\n D deleted.go\n")
+	defer restore()
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:      true,
+			ShowGitStatus: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"D deleted.go", "M README.md", "? new-file.go", "! ignored.log", "  main.go", "0 directories, 5 files"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+}
+
+func TestDispatcher_TreeDirectoryGitStatus(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "README.md"), "readme")
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+	mustWriteFile(t, filepath.Join(dir, "new-file.go"), "package main")
+
+	restore := stubGitStatusCommand(t, " M README.md\n?? new-file.go\n D deleted.go\n")
+	defer restore()
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:      true,
+			ShowTreeView:  true,
+			ShowGitStatus: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	for _, want := range []string{"├── D deleted.go", "├──   main.go", "├── ? new-file.go", "└── M README.md"} {
+		if !strings.Contains(got, want) {
+			t.Fatalf("dispatcher() output = %q, want to contain %q", got, want)
+		}
+	}
+}
+
+func TestDispatcher_GitStatusCommandErrorIsNoop(t *testing.T) {
+	dir := t.TempDir()
+	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
+
+	original := gitStatusCommand
+	gitStatusCommand = func(string) ([]byte, error) {
+		return nil, os.ErrNotExist
+	}
+	defer func() {
+		gitStatusCommand = original
+	}()
+
+	var output bytes.Buffer
+	err := dispatcher(module.Options{
+		Directory: dir,
+		Flags: module.Flags{
+			HideIcon:      true,
+			ShowGitStatus: true,
+		},
+	}, &output)
+	if err != nil {
+		t.Fatalf("dispatcher() error = %v, want nil", err)
+	}
+
+	got := stripANSI(output.String())
+	if !strings.Contains(got, "  main.go") {
+		t.Fatalf("dispatcher() output = %q, want clean git status spacing", got)
+	}
+}
+
 func TestDispatcher_ListDirectoryIncludeExclude(t *testing.T) {
 	dir := t.TempDir()
 	mustWriteFile(t, filepath.Join(dir, "main.go"), "package main")
@@ -901,6 +991,203 @@ func TestDispatcher_GitIgnoreWithHiddenFiles(t *testing.T) {
 	}
 	if strings.Contains(got, ".env") {
 		t.Fatalf("dispatcher() output = %q, want not to contain ignored .env", got)
+	}
+}
+
+func TestGitStatusParsing(t *testing.T) {
+	statuses := parseGitStatusOutput(strings.Join([]string{
+		" M README.md",
+		"A  added.go",
+		" D deleted.go",
+		"?? new-file.go",
+		"!! ignored.log",
+		"R  old.go -> renamed.go",
+		"C  source.go -> copied.go",
+		"",
+		"x",
+	}, "\n"))
+
+	want := map[string]string{
+		"README.md":   "M",
+		"added.go":    "A",
+		"deleted.go":  "D",
+		"new-file.go": "?",
+		"ignored.log": "!",
+		"renamed.go":  "M",
+		"copied.go":   "M",
+	}
+	if len(statuses) != len(want) {
+		t.Fatalf("parseGitStatusOutput() length = %d, want %d; got %+v", len(statuses), len(want), statuses)
+	}
+	for path, symbol := range want {
+		if statuses[path] != symbol {
+			t.Fatalf("status for %q = %q, want %q; got %+v", path, statuses[path], symbol, statuses)
+		}
+	}
+}
+
+func TestGitStatusMatcher(t *testing.T) {
+	root := t.TempDir()
+	matcher := &gitStatusMatcher{
+		root: root,
+		statuses: map[string]string{
+			"cmd/main.go": "M",
+		},
+	}
+
+	if got := matcher.statusFor(filepath.Join(root, "cmd", "main.go")); got != "M" {
+		t.Fatalf("statusFor() = %q, want M", got)
+	}
+	if got := matcher.statusFor(filepath.Join(root, "README.md")); got != "" {
+		t.Fatalf("statusFor() = %q, want empty status", got)
+	}
+	if got := matcher.statusFor(filepath.Join(t.TempDir(), "outside.go")); got != "" {
+		t.Fatalf("outside root statusFor() = %q, want empty status", got)
+	}
+	errMatcher := &gitStatusMatcher{root: ""}
+	if got := errMatcher.statusFor(filepath.Join(root, "cmd", "main.go")); got != "" {
+		t.Fatalf("invalid root statusFor() = %q, want empty status", got)
+	}
+	if got := (*gitStatusMatcher)(nil).statusFor(filepath.Join(root, "cmd", "main.go")); got != "" {
+		t.Fatalf("nil statusFor() = %q, want empty status", got)
+	}
+}
+
+func TestNewGitStatusMatcher(t *testing.T) {
+	original := gitStatusCommand
+	defer func() {
+		gitStatusCommand = original
+	}()
+
+	t.Run("returns matcher when command has statuses", func(t *testing.T) {
+		gitStatusCommand = func(root string) ([]byte, error) {
+			return []byte(" M README.md\n"), nil
+		}
+
+		matcher := newGitStatusMatcher(t.TempDir())
+		if matcher == nil {
+			t.Fatal("newGitStatusMatcher() = nil, want matcher")
+		}
+		if got := matcher.statuses["README.md"]; got != "M" {
+			t.Fatalf("newGitStatusMatcher().statuses[README.md] = %q, want M", got)
+		}
+	})
+
+	t.Run("returns nil when command has no statuses", func(t *testing.T) {
+		gitStatusCommand = func(root string) ([]byte, error) {
+			return []byte("\n"), nil
+		}
+
+		if matcher := newGitStatusMatcher(t.TempDir()); matcher != nil {
+			t.Fatalf("newGitStatusMatcher() = %+v, want nil", matcher)
+		}
+	})
+}
+
+func TestDeletedGitFileInfo(t *testing.T) {
+	file := deletedGitFileInfo{name: "deleted.go"}
+
+	if file.Name() != "deleted.go" {
+		t.Fatalf("Name() = %q, want deleted.go", file.Name())
+	}
+	if file.Size() != 0 {
+		t.Fatalf("Size() = %d, want 0", file.Size())
+	}
+	if file.Mode() != 0 {
+		t.Fatalf("Mode() = %v, want 0", file.Mode())
+	}
+	if !file.ModTime().IsZero() {
+		t.Fatalf("ModTime() = %v, want zero time", file.ModTime())
+	}
+	if file.IsDir() {
+		t.Fatal("IsDir() = true, want false")
+	}
+	if file.Sys() != nil {
+		t.Fatalf("Sys() = %v, want nil", file.Sys())
+	}
+}
+
+func TestGitStatusMatcherAppendDeletedFiles(t *testing.T) {
+	root := t.TempDir()
+	cmdDir := filepath.Join(root, "cmd")
+	matcher := &gitStatusMatcher{
+		root: root,
+		statuses: map[string]string{
+			"deleted.go":      "D",
+			"existing.go":     "D",
+			"cmd/deleted.go":  "D",
+			"cmd/modified.go": "M",
+		},
+	}
+
+	files := matcher.appendDeletedFiles(root, []os.FileInfo{fakeFileInfo{name: "existing.go"}})
+	if got, want := fileInfoNames(files), []string{"existing.go", "deleted.go"}; !equalStringSlices(got, want) {
+		t.Fatalf("appendDeletedFiles(root) names = %v, want %v", got, want)
+	}
+
+	files = matcher.appendDeletedFiles(cmdDir, nil)
+	if got, want := fileInfoNames(files), []string{"deleted.go"}; !equalStringSlices(got, want) {
+		t.Fatalf("appendDeletedFiles(cmdDir) names = %v, want %v", got, want)
+	}
+
+	files = (*gitStatusMatcher)(nil).appendDeletedFiles(root, []os.FileInfo{fakeFileInfo{name: "main.go"}})
+	if got, want := fileInfoNames(files), []string{"main.go"}; !equalStringSlices(got, want) {
+		t.Fatalf("nil appendDeletedFiles() names = %v, want %v", got, want)
+	}
+}
+
+func TestColorGitStatusSymbol(t *testing.T) {
+	tests := []struct {
+		symbol string
+		want   string
+	}{
+		{symbol: "M", want: module.Yellow + "M" + module.Reset},
+		{symbol: "A", want: module.Green + "A" + module.Reset},
+		{symbol: "D", want: module.Red + "D" + module.Reset},
+		{symbol: "?", want: module.Cyan + "?" + module.Reset},
+		{symbol: "!", want: module.Grey + "!" + module.Reset},
+		{symbol: " ", want: " "},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.symbol, func(t *testing.T) {
+			if got := colorGitStatusSymbol(tt.symbol); got != tt.want {
+				t.Fatalf("colorGitStatusSymbol(%q) = %q, want %q", tt.symbol, got, tt.want)
+			}
+		})
+	}
+}
+
+func TestGitStatusHelpers(t *testing.T) {
+	tests := []struct {
+		code string
+		want string
+	}{
+		{code: "??", want: "?"},
+		{code: "!!", want: "!"},
+		{code: " D", want: "D"},
+		{code: "A ", want: "A"},
+		{code: " M", want: "M"},
+		{code: "R ", want: "M"},
+		{code: "  ", want: ""},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.code, func(t *testing.T) {
+			if got := gitStatusSymbol(tt.code); got != tt.want {
+				t.Fatalf("gitStatusSymbol(%q) = %q, want %q", tt.code, got, tt.want)
+			}
+		})
+	}
+
+	if got := normalizeGitStatusPath(`"vendor/"`); got != "vendor" {
+		t.Fatalf("normalizeGitStatusPath() = %q, want vendor", got)
+	}
+	if _, _, ok := parseGitStatusLine("x"); ok {
+		t.Fatal("parseGitStatusLine(short) ok = true, want false")
+	}
+	if _, _, ok := parseGitStatusLine(" M   "); ok {
+		t.Fatal("parseGitStatusLine(empty path) ok = true, want false")
 	}
 }
 
@@ -1988,6 +2275,17 @@ func mustChtimes(t *testing.T, path string, timestamp time.Time) {
 	}
 }
 
+func stubGitStatusCommand(t *testing.T, output string) func() {
+	t.Helper()
+	original := gitStatusCommand
+	gitStatusCommand = func(string) ([]byte, error) {
+		return []byte(output), nil
+	}
+	return func() {
+		gitStatusCommand = original
+	}
+}
+
 func assertOutputOrder(t *testing.T, output string, orderedNames []string) {
 	t.Helper()
 	previousIndex := -1
@@ -2009,6 +2307,18 @@ func fileInfoNames(files []os.FileInfo) []string {
 		names = append(names, file.Name())
 	}
 	return names
+}
+
+func equalStringSlices(a, b []string) bool {
+	if len(a) != len(b) {
+		return false
+	}
+	for i := range a {
+		if a[i] != b[i] {
+			return false
+		}
+	}
+	return true
 }
 
 func findJSONEntry(entries []jsonEntry, name string) (jsonEntry, bool) {

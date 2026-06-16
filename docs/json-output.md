@@ -137,6 +137,7 @@ Text formatting flags do not affect JSON output:
 | `--long` | No effect. |
 | `--readable` | No effect; sizes remain raw bytes. |
 | `--no-icons` | No effect. |
+| `--git-status` | No effect; Git status decorations are text-only. |
 | `--no-summary` | No effect; JSON always includes `summary`. |
 
 ## Stability notes

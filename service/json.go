@@ -73,6 +73,7 @@ func collectJSONFlatEntries(options directoryOptions) (entries []jsonEntry, summ
 		}
 	}()
 
+	files = options.gitStatus.appendDeletedFiles(options.Directory, files)
 	sortSlice(files, options.Flags)
 	for _, file := range files {
 		if !shouldShowFile(file, options) {
@@ -103,6 +104,7 @@ func collectJSONTreeEntries(options directoryOptions, depth int) (entries []json
 		}
 	}()
 
+	files = options.gitStatus.appendDeletedFiles(options.Directory, files)
 	sortSlice(files, options.Flags)
 	visibleFiles, err := visibleTreeFiles(files, options, depth)
 	if err != nil {
