@@ -98,7 +98,7 @@ func TestRootCmd_VersionFlag(t *testing.T) {
 				t.Fatalf("Execute() error = %v, want nil", err)
 			}
 
-			if got := output.String(); got != "treels v1.3.1\n" {
+			if got := output.String(); got != "treels v1.4.0\n" {
 				t.Fatalf("Execute() output = %q, want version output", got)
 			}
 		})
@@ -116,7 +116,7 @@ func TestExecute_VersionFlag(t *testing.T) {
 		Execute()
 	})
 
-	if got := output; got != "treels v1.3.1\n" {
+	if got := output; got != "treels v1.4.0\n" {
 		t.Fatalf("Execute() output = %q, want version output", got)
 	}
 }

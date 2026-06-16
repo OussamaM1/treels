@@ -12,7 +12,7 @@ import (
 	"github.com/spf13/cobra"
 )
 
-const version = "v1.3.1"
+const version = "v1.4.0"
 
 var validSortFields = map[string]struct{}{
 	"name":     {},

@@ -17,7 +17,7 @@ func TestMainVersionFlag(t *testing.T) {
 		main()
 	})
 
-	if output != "treels v1.3.1\n" {
+	if output != "treels v1.4.0\n" {
 		t.Fatalf("main() output = %q, want version output", output)
 	}
 }
