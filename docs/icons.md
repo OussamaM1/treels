@@ -39,7 +39,17 @@ This is also useful for:
 
 ## Colors
 
-`treels` applies ANSI colors to icons and directory names in text output.
+`treels` applies ANSI colors to icons, directory names, and `--git-status` symbols in text output.
+
+Git status colors are:
+
+| Symbol | Color |
+| --- | --- |
+| `M` | Yellow |
+| `A` | Green |
+| `D` | Red |
+| `?` | Cyan |
+| `!` | Grey |
 
 JSON output never includes icons or ANSI color codes.
 

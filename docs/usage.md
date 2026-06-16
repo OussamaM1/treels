@@ -149,6 +149,23 @@ treels --exclude "vendor/**"
 treels --tree --include "*.go" --exclude "vendor/**"
 ```
 
+### Show Git status decorations
+
+```bash
+treels --tree --git-status --no-icons
+```
+
+Example symbols:
+
+| Symbol | Meaning | Color |
+| --- | --- | --- |
+| `M` | Modified | Yellow |
+| `A` | Added | Green |
+| `D` | Deleted | Red |
+| `?` | Untracked | Cyan |
+| `!` | Ignored | Grey |
+| space | Clean or no Git status | Uncolored |
+
 ### Sort by largest files first
 
 ```bash
@@ -184,6 +201,7 @@ treels --json
 | `--gitignore` | Respect `.gitignore` rules from the target directory. |
 | `--include PATTERN` | Show only entries matching a glob pattern. Can be used multiple times. |
 | `--exclude PATTERN` | Hide entries matching a glob pattern. Can be used multiple times. |
+| `--git-status` | Show Git status symbols next to entries in text output. |
 | `--json` | Output machine-readable JSON. |
 | `-l`, `--long` | Show detailed file metadata. |
 | `--sort name|size|modified|type` | Sort entries by name, size, modification time, or file type. Defaults to `name`. |
@@ -206,6 +224,7 @@ treels --json
 | `--include "*.go" --include "*.md"` | Shows entries matching either include pattern. |
 | `--include "*.go" --exclude "vendor/**"` | Shows Go files except entries under `vendor`. |
 | `--tree --include "*.go"` | Keeps parent directories visible when they contain included files. |
+| `--tree --git-status` | Shows tree branches plus Git status symbols. |
 | `--sort size --reverse` | Shows largest entries first. |
 | `--sort modified --reverse` | Shows newest entries first. |
 | `--dirs-first --reverse` | Keeps directories grouped first, then reverses the selected sort within each group. |

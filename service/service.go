@@ -24,6 +24,7 @@ type directoryOptions struct {
 	module.Options
 	root      string
 	gitIgnore *gitIgnoreMatcher
+	gitStatus *gitStatusMatcher
 }
 
 // Dispatcher func - executes function based on flags
@@ -46,6 +47,9 @@ func dispatcher(options module.Options, output io.Writer) error {
 			return err
 		}
 		traversalOptions.gitIgnore = gitIgnore
+	}
+	if options.Flags.ShowGitStatus {
+		traversalOptions.gitStatus = newGitStatusMatcher(options.Directory)
 	}
 
 	if options.Flags.ShowJSON {
@@ -90,6 +94,8 @@ func listDirectory(options directoryOptions, output io.Writer) (fileCount, dirCo
 		}
 	}()
 
+	files = options.gitStatus.appendDeletedFiles(options.Directory, files)
+
 	// sort files by requested order
 	sortSlice(files, options.Flags)
 
@@ -105,7 +111,7 @@ func listDirectory(options directoryOptions, output io.Writer) (fileCount, dirCo
 				fileCount++
 			}
 
-			formatted := formatFileWithOptions("", file, options.Flags)
+			formatted := formatFileWithOptions(gitStatusPrefix("", file, options), file, options.Flags)
 
 			entries = append(entries, formatted)
 
@@ -152,6 +158,8 @@ func treeDirectory(options directoryOptions, output io.Writer, indent string, is
 		}
 	}()
 
+	files = options.gitStatus.appendDeletedFiles(options.Directory, files)
+
 	// Sort files by requested order
 	sortSlice(files, options.Flags)
 
@@ -183,7 +191,7 @@ func printFilesAndDirectoriesTreeFormat(files []os.FileInfo, options directoryOp
 		isLast := i == lastVisibleIndex
 		prefix, childIndent := calculateIndent(indent, isLast)
 
-		if err := printFileWithPrefix(output, prefix, file, options.Flags); err != nil {
+		if err := printFileWithPrefix(output, prefix, file, options); err != nil {
 			return 0, 0, err
 		}
 
@@ -284,9 +292,39 @@ func calculateIndent(indent string, isLast bool) (prefix, childIndent string) {
 }
 
 // printFileWithPrefix prints the file with the given prefix and icon settings
-func printFileWithPrefix(output io.Writer, prefix string, file os.FileInfo, flags module.Flags) error {
-	_, err := fmt.Fprintln(output, formatFileWithOptions(prefix, file, flags))
+func printFileWithPrefix(output io.Writer, prefix string, file os.FileInfo, options directoryOptions) error {
+	_, err := fmt.Fprintln(output, formatFileWithOptions(gitStatusPrefix(prefix, file, options), file, options.Flags))
 	return err
+}
+
+func gitStatusPrefix(prefix string, file os.FileInfo, options directoryOptions) string {
+	if !options.Flags.ShowGitStatus {
+		return prefix
+	}
+
+	filePath := filepath.Join(options.Directory, file.Name())
+	symbol := options.gitStatus.statusFor(filePath)
+	if symbol == "" {
+		symbol = " "
+	}
+	return prefix + colorGitStatusSymbol(symbol) + " "
+}
+
+func colorGitStatusSymbol(symbol string) string {
+	switch symbol {
+	case "M":
+		return module.Yellow + symbol + module.Reset
+	case "A":
+		return module.Green + symbol + module.Reset
+	case "D":
+		return module.Red + symbol + module.Reset
+	case "?":
+		return module.Cyan + symbol + module.Reset
+	case "!":
+		return module.Grey + symbol + module.Reset
+	default:
+		return symbol
+	}
 }
 
 func formatFileWithOptions(prefix string, file os.FileInfo, flags module.Flags) string {

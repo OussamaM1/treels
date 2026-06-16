@@ -35,6 +35,7 @@ go run .
 go run . --tree --depth 2 --no-icons
 go run . --long --readable
 go run . --include "*.go" --exclude "*_test.go"
+go run . --tree --git-status --no-icons
 ```
 
 ## Build

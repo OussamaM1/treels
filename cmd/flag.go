@@ -16,6 +16,7 @@ func FlagDefinition(cmd *cobra.Command, flags *module.Flags) {
 	cmd.PersistentFlags().BoolVar(&flags.HideIcon, "no-icons", false, "Disable icons")
 	cmd.PersistentFlags().BoolVar(&flags.HideSummary, "no-summary", false, "Hide the final file and directory count")
 	cmd.PersistentFlags().BoolVar(&flags.RespectGitIgnore, "gitignore", false, "Respect .gitignore rules")
+	cmd.PersistentFlags().BoolVar(&flags.ShowGitStatus, "git-status", false, "Show git status symbols next to entries")
 	cmd.PersistentFlags().StringArrayVar(&flags.IncludePatterns, "include", nil, "Show only entries matching a glob pattern; can be used multiple times")
 	cmd.PersistentFlags().StringArrayVar(&flags.ExcludePatterns, "exclude", nil, "Hide entries matching a glob pattern; can be used multiple times")
 	cmd.PersistentFlags().StringVar(&flags.SortBy, "sort", "name", "Sort entries by name, size, modified, or type")
